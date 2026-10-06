@@ -3,5 +3,9 @@ name = "merkle"
 version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
+description = "Sorted-pair keccak Merkle tree (Slotbook brief D13)"
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
+solana-keccak-hasher = "3.1.0"
+thiserror = "2"
