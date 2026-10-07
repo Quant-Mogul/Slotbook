@@ -28,6 +28,7 @@ fn tx(slot: u64, ixs: Vec<RawInstruction>) -> RawTx {
     RawTx {
         slot,
         index: 0,
+        signature: String::new(),
         failed: false,
         instructions: ixs,
         pre_token_balances: vec![],
@@ -39,7 +40,11 @@ fn init_mint_ix(mint: AddressBytes) -> RawInstruction {
     token_ix(vec![20, 6], vec![mint])
 }
 
-fn init_account_ix(account: AddressBytes, mint: AddressBytes, owner: AddressBytes) -> RawInstruction {
+fn init_account_ix(
+    account: AddressBytes,
+    mint: AddressBytes,
+    owner: AddressBytes,
+) -> RawInstruction {
     let mut data = vec![18u8];
     data.extend_from_slice(&owner);
     token_ix(data, vec![account, mint])
@@ -147,7 +152,10 @@ fn litesvm_replay_matches_on_chain_balances() {
         tx(2, vec![init_account_ix(alice_ata_b, mint_b, alice_b)]),
         tx(3, vec![mint_to_ix(alice_ata_b, mint_b, 1000)]),
         tx(4, vec![init_account_ix(bob_ata_b, mint_b, bob_b)]),
-        tx(5, vec![transfer_checked_ix(alice_ata_b, mint_b, bob_ata_b, 400)]),
+        tx(
+            5,
+            vec![transfer_checked_ix(alice_ata_b, mint_b, bob_ata_b, 400)],
+        ),
         tx(6, vec![init_account_ix(alice_extra_b, mint_b, alice_b)]),
         tx(7, vec![mint_to_ix(alice_extra_b, mint_b, 50)]),
     ];
@@ -164,7 +172,10 @@ fn litesvm_replay_matches_on_chain_balances() {
 
     let from_svm = register_from_svm(&svm, mint, &[alice_ata, bob_ata, alice_extra], 7);
 
-    assert_eq!(replayed.rows, from_svm.rows, "replay must match LiteSVM state");
+    assert_eq!(
+        replayed.rows, from_svm.rows,
+        "replay must match LiteSVM state"
+    );
     assert_eq!(replayed.balance_of(&alice_b), Some(650));
     assert_eq!(replayed.balance_of(&bob_b), Some(400));
     assert_eq!(replayed.register_total, 1050);

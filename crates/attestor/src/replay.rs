@@ -1,8 +1,6 @@
 use crate::error::{addr_str, AttestorError};
 use crate::ledger::RawTx;
-use crate::token::{
-    discovery_accounts, AccountState, TokenOp,
-};
+use crate::token::{discovery_accounts, AccountState, TokenOp};
 use snapshot::{AddressBytes, HolderRegister, TokenAccountState};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -18,7 +16,9 @@ pub fn mint_frozen_at_creation(mint: &AddressBytes, txs: &[RawTx]) -> bool {
     ordered.sort_by_key(|tx| (tx.slot, tx.index));
     for tx in ordered {
         let ops = tx.ops();
-        let inits = ops.iter().any(|op| matches!(op, TokenOp::InitializeMint { mint: m } if m == mint));
+        let inits = ops
+            .iter()
+            .any(|op| matches!(op, TokenOp::InitializeMint { mint: m } if m == mint));
         if inits {
             return ops.iter().any(|op| {
                 matches!(
@@ -133,12 +133,16 @@ fn apply_ops(
             } if m == mint => {
                 debit(accounts, account, *amount)?;
             }
-            TokenOp::Freeze { account, mint: m, .. } if m == mint => {
+            TokenOp::Freeze {
+                account, mint: m, ..
+            } if m == mint => {
                 if let Some(st) = accounts.get_mut(account) {
                     st.frozen = true;
                 }
             }
-            TokenOp::Thaw { account, mint: m, .. } if m == mint => {
+            TokenOp::Thaw {
+                account, mint: m, ..
+            } if m == mint => {
                 if let Some(st) = accounts.get_mut(account) {
                     st.frozen = false;
                 }
@@ -173,7 +177,9 @@ fn apply_balances(
         .map(|b| b.account)
         .collect();
     for pre in &tx.pre_token_balances {
-        if pre.mint == *mint && discovered.contains(&pre.account) && !post_accounts.contains(&pre.account)
+        if pre.mint == *mint
+            && discovered.contains(&pre.account)
+            && !post_accounts.contains(&pre.account)
         {
             accounts.remove(&pre.account);
         }
@@ -247,7 +253,7 @@ pub fn resolve_owner(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ledger::{RawInstruction, RawTx};
+    use crate::ledger::{RawInstruction, RawTx, TokenBalance};
     use crate::token::TOKEN_2022_PROGRAM;
     use snapshot::decode_address;
 
@@ -269,6 +275,7 @@ mod tests {
         RawTx {
             slot,
             index,
+            signature: String::new(),
             failed: false,
             instructions,
             pre_token_balances: vec![],
@@ -280,14 +287,16 @@ mod tests {
         tx(
             1,
             0,
-            vec![
-                ix(vec![20, 6], vec![mint]),
-                ix(vec![28, 0, 2], vec![mint]),
-            ],
+            vec![ix(vec![20, 6], vec![mint]), ix(vec![28, 0, 2], vec![mint])],
         )
     }
 
-    fn init_account(slot: u64, account: AddressBytes, mint: AddressBytes, owner: AddressBytes) -> RawTx {
+    fn init_account(
+        slot: u64,
+        account: AddressBytes,
+        mint: AddressBytes,
+        owner: AddressBytes,
+    ) -> RawTx {
         let mut data = vec![18u8];
         data.extend_from_slice(&owner);
         tx(slot, 0, vec![ix(data, vec![account, mint])])
@@ -387,5 +396,61 @@ mod tests {
         )
         .unwrap();
         assert_eq!(reg.balance_of(&owner), Some(100));
+    }
+
+    fn post_balance_tx(
+        slot: u64,
+        index: u32,
+        account: AddressBytes,
+        mint: AddressBytes,
+        owner: AddressBytes,
+        amount: u64,
+    ) -> RawTx {
+        let mut t = tx(slot, index, vec![]);
+        t.post_token_balances = vec![TokenBalance {
+            account,
+            mint,
+            owner,
+            amount,
+        }];
+        t
+    }
+
+    #[test]
+    fn same_slot_applies_by_index_not_vec_order() {
+        let mint = pk(9);
+        let ata = pk(10);
+        let owner = pk(1);
+        let init = vec![init_mint_frozen(mint), init_account(2, ata, mint, owner)];
+        // Vec order is reversed; indices say mint-100 then transfer-out to 60.
+        let mut txs = init.clone();
+        txs.push(post_balance_tx(5, 1, ata, mint, owner, 60));
+        txs.push(post_balance_tx(5, 0, ata, mint, owner, 100));
+        let reg = replay(
+            &ReplayOpts {
+                mint,
+                record_slot: 5,
+                require_frozen_default: true,
+            },
+            &txs,
+        )
+        .unwrap();
+        assert_eq!(reg.balance_of(&owner), Some(60));
+
+        // Reversed indices: last write is 100, must not end at 60.
+        let mut reversed = init;
+        reversed.push(post_balance_tx(5, 0, ata, mint, owner, 60));
+        reversed.push(post_balance_tx(5, 1, ata, mint, owner, 100));
+        let reg = replay(
+            &ReplayOpts {
+                mint,
+                record_slot: 5,
+                require_frozen_default: true,
+            },
+            &reversed,
+        )
+        .unwrap();
+        assert_eq!(reg.balance_of(&owner), Some(100));
+        assert_ne!(reg.balance_of(&owner), Some(60));
     }
 }

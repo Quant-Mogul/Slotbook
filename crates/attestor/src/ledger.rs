@@ -19,7 +19,10 @@ pub struct TokenBalance {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RawTx {
     pub slot: u64,
+    /// Position in the block. Required for same-slot ordering.
     pub index: u32,
+    #[serde(default)]
+    pub signature: String,
     pub failed: bool,
     pub instructions: Vec<RawInstruction>,
     pub pre_token_balances: Vec<TokenBalance>,

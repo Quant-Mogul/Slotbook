@@ -9,7 +9,7 @@ mod register;
 
 pub use encode::{
     build_tree, leaf_hash, leaf_inner, manifest_hash, proof_for_owner, salt, salt_seed_hash,
-    Backend, EncodeError, Leaf, Manifest, ProofBundle, SPEC_VERSION,
+    Backend, EncodeError, Leaf, Manifest, ProofBundle, SALT_PREFIX, SPEC_VERSION,
 };
 pub use register::{AddressBytes, HolderRegister, HolderRow, TokenAccountState};
 

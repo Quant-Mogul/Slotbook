@@ -1,11 +1,17 @@
-//! Sorted-pair keccak Merkle tree.
+//! Sorted-pair keccak Merkle tree and Slotbook leaf hashing.
 //!
 //! Brief D13: internal nodes are `keccak256(min(a,b) || max(a,b))` with no
 //! prefix. An odd leftover node is promoted unhashed. Proof depth is at most 32.
+//!
+//! Leaf / salt (D12–D13) live here so the on-chain program can depend on this
+//! crate without pulling `snapshot`.
 
 use solana_keccak_hasher::hashv;
 
 pub type Node = [u8; 32];
+
+/// `salt = keccak256("slotbook-salt-v1" || distribution || owner || salt_seed)`
+pub const SALT_PREFIX: &[u8] = b"slotbook-salt-v1";
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum MerkleError {
@@ -26,6 +32,20 @@ pub struct Proof {
 
 pub fn keccak(parts: &[&[u8]]) -> Node {
     hashv(parts).to_bytes()
+}
+
+pub fn salt(distribution: &[u8; 32], owner: &[u8; 32], salt_seed: &Node) -> Node {
+    keccak(&[SALT_PREFIX, distribution, owner, salt_seed])
+}
+
+pub fn leaf_inner(owner: &[u8; 32], balance: u64, salt: &Node) -> Node {
+    keccak(&[owner, &balance.to_le_bytes(), salt])
+}
+
+/// `leaf = keccak256(0x00 || keccak256(owner || balance_le_u64 || salt_32))`
+pub fn leaf_hash(owner: &[u8; 32], balance: u64, salt: &Node) -> Node {
+    let inner = leaf_inner(owner, balance, salt);
+    keccak(&[&[0x00u8], &inner])
 }
 
 pub fn parent(a: &Node, b: &Node) -> Node {
@@ -183,6 +203,21 @@ mod tests {
 
     #[test]
     fn empty_rejected() {
-        assert_eq!(MerkleTree::from_leaves(vec![]).unwrap_err(), MerkleError::Empty);
+        assert_eq!(
+            MerkleTree::from_leaves(vec![]).unwrap_err(),
+            MerkleError::Empty
+        );
+    }
+
+    #[test]
+    fn salt_and_leaf_match_brief_formula() {
+        let distribution = [3u8; 32];
+        let owner = [1u8; 32];
+        let salt_seed = [2u8; 32];
+        let s = salt(&distribution, &owner, &salt_seed);
+        assert_eq!(s, keccak(&[SALT_PREFIX, &distribution, &owner, &salt_seed]));
+        let inner = keccak(&[&owner, &1000u64.to_le_bytes(), &s]);
+        assert_eq!(leaf_inner(&owner, 1000, &s), inner);
+        assert_eq!(leaf_hash(&owner, 1000, &s), keccak(&[&[0x00u8], &inner]));
     }
 }

@@ -3,7 +3,7 @@ use merkle::{keccak, verify, MerkleError, MerkleTree, Node, Proof};
 use serde::{Deserialize, Serialize};
 
 pub const SPEC_VERSION: &str = "1.0";
-pub const SALT_PREFIX: &[u8] = b"slotbook-salt-v1";
+pub use merkle::{leaf_hash, leaf_inner, salt, SALT_PREFIX};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(u8)]
@@ -42,22 +42,6 @@ pub struct ProofBundle {
     pub leaf: Node,
     pub proof: Proof,
     pub root: Node,
-}
-
-/// `salt = keccak256("slotbook-salt-v1" || distribution || owner || salt_seed)`
-pub fn salt(distribution: &AddressBytes, owner: &AddressBytes, salt_seed: &Node) -> Node {
-    keccak(&[SALT_PREFIX, distribution, owner, salt_seed])
-}
-
-/// Inner hash: `keccak256(owner || balance_le_u64 || salt_32)`
-pub fn leaf_inner(owner: &AddressBytes, balance: u64, salt: &Node) -> Node {
-    keccak(&[owner, &balance.to_le_bytes(), salt])
-}
-
-/// Leaf: `keccak256(0x00 || inner)`
-pub fn leaf_hash(owner: &AddressBytes, balance: u64, salt: &Node) -> Node {
-    let inner = leaf_inner(owner, balance, salt);
-    keccak(&[&[0x00u8], &inner])
 }
 
 pub fn salt_seed_hash(salt_seed: &Node) -> Node {
@@ -164,40 +148,6 @@ mod tests {
         [fill; 32]
     }
 
-    /// Independent vector from brief D12–D13 (not copied from another implementation).
-    #[test]
-    fn salt_and_leaf_match_brief_formula() {
-        let distribution = pk(3);
-        let owner = pk(1);
-        let salt_seed = pk(2);
-        let s = salt(&distribution, &owner, &salt_seed);
-        let expected_salt = keccak(&[SALT_PREFIX, &distribution, &owner, &salt_seed]);
-        assert_eq!(s, expected_salt);
-        let inner = keccak(&[&owner, &1000u64.to_le_bytes(), &s]);
-        assert_eq!(leaf_inner(&owner, 1000, &s), inner);
-        assert_eq!(leaf_hash(&owner, 1000, &s), keccak(&[&[0x00u8], &inner]));
-    }
-
-    #[test]
-    fn independent_vector_file_matches_brief() {
-        let v: serde_json::Value =
-            serde_json::from_str(include_str!("../vectors/leaf_v1.json")).unwrap();
-        let distribution: AddressBytes =
-            serde_json::from_value(v["distribution"].clone()).unwrap();
-        let owner: AddressBytes = serde_json::from_value(v["owner"].clone()).unwrap();
-        let salt_seed: Node = serde_json::from_value(v["salt_seed"].clone()).unwrap();
-        let balance = v["balance"].as_u64().unwrap();
-        let s = salt(&distribution, &owner, &salt_seed);
-        assert_eq!(
-            s,
-            keccak(&[SALT_PREFIX, &distribution, &owner, &salt_seed])
-        );
-        assert_eq!(
-            leaf_hash(&owner, balance, &s),
-            keccak(&[&[0x00u8], &leaf_inner(&owner, balance, &s)])
-        );
-    }
-
     #[test]
     fn tree_and_proof_round_trip() {
         let register = HolderRegister {
@@ -216,8 +166,7 @@ mod tests {
             ],
             register_total: 100,
         };
-        let bundle =
-            proof_for_owner(&register, &pk(8), &pk(7), &pk(4), 1, 42).unwrap();
+        let bundle = proof_for_owner(&register, &pk(8), &pk(7), &pk(4), 1, 42).unwrap();
         assert_eq!(bundle.balance, 90);
         assert!(verify(bundle.leaf, &bundle.proof, bundle.root));
         assert!(!verify(bundle.leaf, &bundle.proof, pk(0)));
