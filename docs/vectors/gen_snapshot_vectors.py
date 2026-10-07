@@ -173,140 +173,146 @@ def manifest_hash(m):
     )
 
 
-# ----------------------------------------------------------------- inputs
 
-DISTRIBUTION = bytes([0xD1]) * 32
-SALT_SEED = bytes(range(32))
-MINT = bytes([0x4D]) * 32
+def main():
+    # ----------------------------------------------------------------- inputs
 
-
-def key(b):
-    return bytes([b]) * 32
+    DISTRIBUTION = bytes([0xD1]) * 32
+    SALT_SEED = bytes(range(32))
+    MINT = bytes([0x4D]) * 32
 
 
-def H(b):
-    return b.hex()
+    def key(b):
+        return bytes([b]) * 32
 
 
-def tree_vector(name, note, accounts):
-    rows, total = register(accounts)
-    salts = [salt(DISTRIBUTION, o, SALT_SEED) for o, _ in rows]
-    leaves = [leaf(o, bal, s) for (o, bal), s in zip(rows, salts)]
-    lvls = levels(leaves)
-    root = lvls[-1][0]
-    out_rows = []
-    for i, ((o, bal), s, lf) in enumerate(zip(rows, salts, leaves)):
-        sibs = proof(lvls, i)
-        assert verify(lf, sibs, root)
-        out_rows.append({
-            "owner": H(o), "owner_b58": b58(o), "balance": bal,
-            "salt": H(s), "leaf": H(lf), "proof": [H(x) for x in sibs],
-        })
-    return {
-        "name": name,
-        "note": note,
-        "accounts": [
-            {"account": H(a["account"]), "owner": H(a["owner"]),
-             "amount": a["amount"], "frozen": a["frozen"]}
-            for a in accounts
+    def H(b):
+        return b.hex()
+
+
+    def tree_vector(name, note, accounts):
+        rows, total = register(accounts)
+        salts = [salt(DISTRIBUTION, o, SALT_SEED) for o, _ in rows]
+        leaves = [leaf(o, bal, s) for (o, bal), s in zip(rows, salts)]
+        lvls = levels(leaves)
+        root = lvls[-1][0]
+        out_rows = []
+        for i, ((o, bal), s, lf) in enumerate(zip(rows, salts, leaves)):
+            sibs = proof(lvls, i)
+            assert verify(lf, sibs, root)
+            out_rows.append({
+                "owner": H(o), "owner_b58": b58(o), "balance": bal,
+                "salt": H(s), "leaf": H(lf), "proof": [H(x) for x in sibs],
+            })
+        return {
+            "name": name,
+            "note": note,
+            "accounts": [
+                {"account": H(a["account"]), "owner": H(a["owner"]),
+                 "amount": a["amount"], "frozen": a["frozen"]}
+                for a in accounts
+            ],
+            "rows": out_rows,
+            "register_total": total,
+            "root": H(root),
+        }, root, total, len(rows)
+
+
+    def acct(a, o, amount, frozen=False):
+        return {"account": key(a), "owner": key(o), "amount": amount, "frozen": frozen}
+
+
+    MAX = 2 ** 64 - 1
+
+    t1, _, _, _ = tree_vector(
+        "one_holder_max_balance",
+        "One row: root = leaf, proof is empty. Balance is u64::MAX.",
+        [acct(0xA1, 0x11, MAX)],
+    )
+    t2, _, _, _ = tree_vector(
+        "two_holders",
+        "Two rows, given in reverse owner order; rows are sorted by owner bytes.",
+        [acct(0xA1, 0xC3, 250), acct(0xA2, 0x22, 750)],
+    )
+    t5, root5, total5, rows5 = tree_vector(
+        "five_holders_sum_zero_frozen",
+        "Seven accounts -> five rows. Owner 0x11.. holds two accounts (summed). "
+        "Owner 0x99.. has balance 0 (dropped). Owner 0x5a.. is frozen (included). "
+        "Five leaves: odd node promoted at two levels.",
+        [
+            acct(0xA1, 0xE9, 40),
+            acct(0xA2, 0x11, 100),
+            acct(0xA3, 0x5A, 7, frozen=True),
+            acct(0xA4, 0x99, 0),
+            acct(0xA5, 0x07, 1),
+            acct(0xA6, 0x11, 23),
+            acct(0xA7, 0xAA, 1_000_000),
         ],
-        "rows": out_rows,
-        "register_total": total,
-        "root": H(root),
-    }, root, total, len(rows)
+    )
 
+    manifest = {
+        "spec_version": SPEC_VERSION,
+        "distribution": DISTRIBUTION,
+        "mint": MINT,
+        "record_slot": 1_000_000,
+        "first_covered_slot": 999_000,
+        "resolved_slot": 1_000_000,  # record_slot had a block (spec 3.3)
+        "backend": 0,
+        "rows": rows5,
+        "register_total": total5,
+        "root": root5,
+        "salt_seed_hash": keccak256(SALT_SEED),
+    }
 
-def acct(a, o, amount, frozen=False):
-    return {"account": key(a), "owner": key(o), "amount": amount, "frozen": frozen}
-
-
-MAX = 2 ** 64 - 1
-
-t1, _, _, _ = tree_vector(
-    "one_holder_max_balance",
-    "One row: root = leaf, proof is empty. Balance is u64::MAX.",
-    [acct(0xA1, 0x11, MAX)],
-)
-t2, _, _, _ = tree_vector(
-    "two_holders",
-    "Two rows, given in reverse owner order; rows are sorted by owner bytes.",
-    [acct(0xA1, 0xC3, 250), acct(0xA2, 0x22, 750)],
-)
-t5, root5, total5, rows5 = tree_vector(
-    "five_holders_sum_zero_frozen",
-    "Seven accounts -> five rows. Owner 0x11.. holds two accounts (summed). "
-    "Owner 0x99.. has balance 0 (dropped). Owner 0x5a.. is frozen (included). "
-    "Five leaves: odd node promoted at two levels.",
-    [
-        acct(0xA1, 0xE9, 40),
-        acct(0xA2, 0x11, 100),
-        acct(0xA3, 0x5A, 7, frozen=True),
-        acct(0xA4, 0x99, 0),
-        acct(0xA5, 0x07, 1),
-        acct(0xA6, 0x11, 23),
-        acct(0xA7, 0xAA, 1_000_000),
-    ],
-)
-
-manifest = {
-    "spec_version": SPEC_VERSION,
-    "distribution": DISTRIBUTION,
-    "mint": MINT,
-    "record_slot": 1_000_000,
-    "first_covered_slot": 999_000,
-    "resolved_slot": 1_000_000,  # record_slot had a block (spec 3.3)
-    "backend": 0,
-    "rows": rows5,
-    "register_total": total5,
-    "root": root5,
-    "salt_seed_hash": keccak256(SALT_SEED),
-}
-
-vectors = {
-    "spec": "docs/SNAPSHOT_SPEC.md",
-    "spec_version": SPEC_VERSION,
-    "generator": "docs/vectors/gen_snapshot_vectors.py",
-    "encoding": "all byte strings are lowercase hex, no 0x prefix",
-    "keccak256_known_answers": [
-        {"input_utf8": "", "hash": keccak256(b"").hex()},
-        {"input_utf8": "abc", "hash": keccak256(b"abc").hex()},
-    ],
-    "common": {
-        "distribution": H(DISTRIBUTION),
-        "salt_seed": H(SALT_SEED),
-        "salt_seed_hash": H(keccak256(SALT_SEED)),
-        "mint": H(MINT),
-    },
-    "leaf_vectors": [
-        {
-            "name": "brief_example",
-            "distribution": H(key(3)), "owner": H(key(1)), "salt_seed": H(key(2)),
-            "balance": 1000,
-            "balance_le_u64": u64(1000).hex(),
-            "salt": H(salt(key(3), key(1), key(2))),
-            "leaf_inner": H(keccak256(key(1) + u64(1000) + salt(key(3), key(1), key(2)))),
-            "leaf": H(leaf(key(1), 1000, salt(key(3), key(1), key(2)))),
+    vectors = {
+        "spec": "docs/SNAPSHOT_SPEC.md",
+        "spec_version": SPEC_VERSION,
+        "generator": "docs/vectors/gen_snapshot_vectors.py",
+        "encoding": "all byte strings are lowercase hex, no 0x prefix",
+        "keccak256_known_answers": [
+            {"input_utf8": "", "hash": keccak256(b"").hex()},
+            {"input_utf8": "abc", "hash": keccak256(b"abc").hex()},
+        ],
+        "common": {
+            "distribution": H(DISTRIBUTION),
+            "salt_seed": H(SALT_SEED),
+            "salt_seed_hash": H(keccak256(SALT_SEED)),
+            "mint": H(MINT),
         },
-        {
-            "name": "balance_one_shows_little_endian",
-            "distribution": H(key(3)), "owner": H(key(1)), "salt_seed": H(key(2)),
-            "balance": 1,
-            "balance_le_u64": u64(1).hex(),
-            "salt": H(salt(key(3), key(1), key(2))),
-            "leaf_inner": H(keccak256(key(1) + u64(1) + salt(key(3), key(1), key(2)))),
-            "leaf": H(leaf(key(1), 1, salt(key(3), key(1), key(2)))),
+        "leaf_vectors": [
+            {
+                "name": "brief_example",
+                "distribution": H(key(3)), "owner": H(key(1)), "salt_seed": H(key(2)),
+                "balance": 1000,
+                "balance_le_u64": u64(1000).hex(),
+                "salt": H(salt(key(3), key(1), key(2))),
+                "leaf_inner": H(keccak256(key(1) + u64(1000) + salt(key(3), key(1), key(2)))),
+                "leaf": H(leaf(key(1), 1000, salt(key(3), key(1), key(2)))),
+            },
+            {
+                "name": "balance_one_shows_little_endian",
+                "distribution": H(key(3)), "owner": H(key(1)), "salt_seed": H(key(2)),
+                "balance": 1,
+                "balance_le_u64": u64(1).hex(),
+                "salt": H(salt(key(3), key(1), key(2))),
+                "leaf_inner": H(keccak256(key(1) + u64(1) + salt(key(3), key(1), key(2)))),
+                "leaf": H(leaf(key(1), 1, salt(key(3), key(1), key(2)))),
+            },
+        ],
+        "tree_vectors": [t1, t2, t5],
+        "manifest_vector": {
+            "note": "Manifest of five_holders_sum_zero_frozen.",
+            "fields": {k: (H(v) if isinstance(v, bytes) else v) for k, v in manifest.items()},
+            "manifest_hash": H(manifest_hash(manifest)),
         },
-    ],
-    "tree_vectors": [t1, t2, t5],
-    "manifest_vector": {
-        "note": "Manifest of five_holders_sum_zero_frozen.",
-        "fields": {k: (H(v) if isinstance(v, bytes) else v) for k, v in manifest.items()},
-        "manifest_hash": H(manifest_hash(manifest)),
-    },
-}
+    }
 
-here = os.path.dirname(os.path.abspath(__file__))
-with open(os.path.join(here, "snapshot_v1.json"), "w") as f:
-    json.dump(vectors, f, indent=2)
-    f.write("\n")
-print("wrote", os.path.join(here, "snapshot_v1.json"))
+    here = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(here, "snapshot_v1.json"), "w") as f:
+        json.dump(vectors, f, indent=2)
+        f.write("\n")
+    print("wrote", os.path.join(here, "snapshot_v1.json"))
+
+
+if __name__ == "__main__":
+    main()
