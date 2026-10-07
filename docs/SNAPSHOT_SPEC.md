@@ -255,7 +255,7 @@ manifest. Key values:
 | `one_holder_max_balance` root (balance u64::MAX) | `b781906d2f9f2a74f3c294cbb7b28a2be7ed4043ab9bea5f8c74eb42c181c5b3` |
 | `two_holders` root | `62cdc8200fd0848b6a8e3572082b6ad3c1d475dbf6b5609a646b311de9688b9a` |
 | `five_holders_sum_zero_frozen` root | `4a9e9afb82054ba45809201c72b90d8b823aa05447bd4253bf425b6546b77a8d` |
-| manifest of the five-holder tree | `f7b8776949c672c54a544d49b706e3ffb9442a59bf46aca46d899d642a4afe6c` |
+| manifest of the five-holder tree | `d825505c45368655fe1f804b6185c40e951fe4b611bca84628de6d9d74008634` |
 
 The five-holder tree covers summing (one owner, two accounts), a zero balance
 (dropped), a frozen holder (included), unsorted input, and odd-node promotion

@@ -254,7 +254,7 @@ manifest = {
     "mint": MINT,
     "record_slot": 1_000_000,
     "first_covered_slot": 999_000,
-    "resolved_slot": 1_000_040,
+    "resolved_slot": 1_000_000,  # record_slot had a block (spec 3.3)
     "backend": 0,
     "rows": rows5,
     "register_total": total5,

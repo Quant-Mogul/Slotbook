@@ -229,13 +229,13 @@
       "mint": "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d",
       "record_slot": 1000000,
       "first_covered_slot": 999000,
-      "resolved_slot": 1000040,
+      "resolved_slot": 1000000,
       "backend": 0,
       "rows": 5,
       "register_total": 1000171,
       "root": "4a9e9afb82054ba45809201c72b90d8b823aa05447bd4253bf425b6546b77a8d",
       "salt_seed_hash": "8ae1aa597fa146ebd3aa2ceddf360668dea5e526567e92b0321816a4e895bd2d"
     },
-    "manifest_hash": "f7b8776949c672c54a544d49b706e3ffb9442a59bf46aca46d899d642a4afe6c"
+    "manifest_hash": "d825505c45368655fe1f804b6185c40e951fe4b611bca84628de6d9d74008634"
   }
 }
