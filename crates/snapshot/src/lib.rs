@@ -1,8 +1,8 @@
 //! Off-chain snapshot types owned by the attestor track.
 //!
 //! Replay output is `owner -> balance`, summed per owner, frozen holders
-//! included. Leaf / salt / tree encoding follows team brief D12–D13. Spec PR
-//! may still refine canonical bytes; vectors are computed from the brief.
+//! included. Encoding follows docs/SNAPSHOT_SPEC.md v1.0; checked against
+//! docs/vectors/snapshot_v1.json by tests/spec_vectors.rs.
 
 mod encode;
 mod register;

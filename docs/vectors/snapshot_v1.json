@@ -1,0 +1,241 @@
+{
+  "spec": "docs/SNAPSHOT_SPEC.md",
+  "spec_version": 100,
+  "generator": "docs/vectors/gen_snapshot_vectors.py",
+  "encoding": "all byte strings are lowercase hex, no 0x prefix",
+  "keccak256_known_answers": [
+    {
+      "input_utf8": "",
+      "hash": "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+    },
+    {
+      "input_utf8": "abc",
+      "hash": "4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45"
+    }
+  ],
+  "common": {
+    "distribution": "d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+    "salt_seed": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "salt_seed_hash": "8ae1aa597fa146ebd3aa2ceddf360668dea5e526567e92b0321816a4e895bd2d",
+    "mint": "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"
+  },
+  "leaf_vectors": [
+    {
+      "name": "brief_example",
+      "distribution": "0303030303030303030303030303030303030303030303030303030303030303",
+      "owner": "0101010101010101010101010101010101010101010101010101010101010101",
+      "salt_seed": "0202020202020202020202020202020202020202020202020202020202020202",
+      "balance": 1000,
+      "balance_le_u64": "e803000000000000",
+      "salt": "503ccf6491d72a4de3dd27ef73cd8f66000a14f5fedaeb0e9d082d9a3cf07d65",
+      "leaf_inner": "e25aea3cc225fbacb194c6ad74b23a1878a5a9550431d35ea998d09de6711d5a",
+      "leaf": "195d1aebba10987bc94c9d9a5b19cbf1f3fb1ce0c67ec054aaaa12bce3cd2718"
+    },
+    {
+      "name": "balance_one_shows_little_endian",
+      "distribution": "0303030303030303030303030303030303030303030303030303030303030303",
+      "owner": "0101010101010101010101010101010101010101010101010101010101010101",
+      "salt_seed": "0202020202020202020202020202020202020202020202020202020202020202",
+      "balance": 1,
+      "balance_le_u64": "0100000000000000",
+      "salt": "503ccf6491d72a4de3dd27ef73cd8f66000a14f5fedaeb0e9d082d9a3cf07d65",
+      "leaf_inner": "0ae51422115eea8f528c1326279d0a9a19bc2152992f571c7e9bf457fe34c0be",
+      "leaf": "7bedd8a958f653d41566a071049f2b2f8ca4f90fe00614810ff199da77993815"
+    }
+  ],
+  "tree_vectors": [
+    {
+      "name": "one_holder_max_balance",
+      "note": "One row: root = leaf, proof is empty. Balance is u64::MAX.",
+      "accounts": [
+        {
+          "account": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "owner": "1111111111111111111111111111111111111111111111111111111111111111",
+          "amount": 18446744073709551615,
+          "frozen": false
+        }
+      ],
+      "rows": [
+        {
+          "owner": "1111111111111111111111111111111111111111111111111111111111111111",
+          "owner_b58": "29d2S7vB453rNYFdR5Ycwt7y9haRT5fwVwL9zTmBhfV2",
+          "balance": 18446744073709551615,
+          "salt": "e3b696fb05cd1c7e4c221904f32d57573de0a39dddd997bdd988f6ba028dd739",
+          "leaf": "b781906d2f9f2a74f3c294cbb7b28a2be7ed4043ab9bea5f8c74eb42c181c5b3",
+          "proof": []
+        }
+      ],
+      "register_total": 18446744073709551615,
+      "root": "b781906d2f9f2a74f3c294cbb7b28a2be7ed4043ab9bea5f8c74eb42c181c5b3"
+    },
+    {
+      "name": "two_holders",
+      "note": "Two rows, given in reverse owner order; rows are sorted by owner bytes.",
+      "accounts": [
+        {
+          "account": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "owner": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "amount": 250,
+          "frozen": false
+        },
+        {
+          "account": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+          "owner": "2222222222222222222222222222222222222222222222222222222222222222",
+          "amount": 750,
+          "frozen": false
+        }
+      ],
+      "rows": [
+        {
+          "owner": "2222222222222222222222222222222222222222222222222222222222222222",
+          "owner_b58": "3JF3sEqM796hk5WFqA6EtmEwJQ9quALszsfJyvXNQKy3",
+          "balance": 750,
+          "salt": "6cd99bbd0be32118f495e53ce2762f328058cfd41e7f192d614e74627d268428",
+          "leaf": "ed096c890268a9b706a3a70afa8f1191b2984859512fd12702bc149a6166b374",
+          "proof": [
+            "33533ff95f8f43f13008aa7da8db82ba8e0ebb33e7248665c10fac6eef3e328f"
+          ]
+        },
+        {
+          "owner": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "owner_b58": "EBBduiozK9vBCemy4FcAjhVkby2FLPstxZxxN7jpgxtr",
+          "balance": 250,
+          "salt": "11c2d332b8c382f0af2683dfcc7067acb21957f504bae325f1075789e50ea782",
+          "leaf": "33533ff95f8f43f13008aa7da8db82ba8e0ebb33e7248665c10fac6eef3e328f",
+          "proof": [
+            "ed096c890268a9b706a3a70afa8f1191b2984859512fd12702bc149a6166b374"
+          ]
+        }
+      ],
+      "register_total": 1000,
+      "root": "62cdc8200fd0848b6a8e3572082b6ad3c1d475dbf6b5609a646b311de9688b9a"
+    },
+    {
+      "name": "five_holders_sum_zero_frozen",
+      "note": "Seven accounts -> five rows. Owner 0x11.. holds two accounts (summed). Owner 0x99.. has balance 0 (dropped). Owner 0x5a.. is frozen (included). Five leaves: odd node promoted at two levels.",
+      "accounts": [
+        {
+          "account": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "owner": "e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9",
+          "amount": 40,
+          "frozen": false
+        },
+        {
+          "account": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+          "owner": "1111111111111111111111111111111111111111111111111111111111111111",
+          "amount": 100,
+          "frozen": false
+        },
+        {
+          "account": "a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3",
+          "owner": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+          "amount": 7,
+          "frozen": true
+        },
+        {
+          "account": "a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+          "owner": "9999999999999999999999999999999999999999999999999999999999999999",
+          "amount": 0,
+          "frozen": false
+        },
+        {
+          "account": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+          "owner": "0707070707070707070707070707070707070707070707070707070707070707",
+          "amount": 1,
+          "frozen": false
+        },
+        {
+          "account": "a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6",
+          "owner": "1111111111111111111111111111111111111111111111111111111111111111",
+          "amount": 23,
+          "frozen": false
+        },
+        {
+          "account": "a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7",
+          "owner": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "amount": 1000000,
+          "frozen": false
+        }
+      ],
+      "rows": [
+        {
+          "owner": "0707070707070707070707070707070707070707070707070707070707070707",
+          "owner_b58": "US517G5965aydkZ46HS38QLi7UQiSojurfbQfKCELFx",
+          "balance": 1,
+          "salt": "c0882ab8f6b2d3b5890bb8f337e0a8d9bfd644507b31e69a551499a8fd138b4c",
+          "leaf": "a4b91bde7ecbe8fb0cfb2d857692765bbaa9cc33973ac94d87d46fc7b30a4a13",
+          "proof": [
+            "391499a6d0ff53818b1b2c0d6bf4c864aa8e89da7ee5db59d38d78644edd17a4",
+            "34f2dfb49caa40a052db047d9725ecd1868861bb6fdb2a4ba20c7db977fae22c",
+            "cd4439c3f089e2c9814261f614028db6a6900fd014ce633fe018333f0026e2dd"
+          ]
+        },
+        {
+          "owner": "1111111111111111111111111111111111111111111111111111111111111111",
+          "owner_b58": "29d2S7vB453rNYFdR5Ycwt7y9haRT5fwVwL9zTmBhfV2",
+          "balance": 123,
+          "salt": "e3b696fb05cd1c7e4c221904f32d57573de0a39dddd997bdd988f6ba028dd739",
+          "leaf": "391499a6d0ff53818b1b2c0d6bf4c864aa8e89da7ee5db59d38d78644edd17a4",
+          "proof": [
+            "a4b91bde7ecbe8fb0cfb2d857692765bbaa9cc33973ac94d87d46fc7b30a4a13",
+            "34f2dfb49caa40a052db047d9725ecd1868861bb6fdb2a4ba20c7db977fae22c",
+            "cd4439c3f089e2c9814261f614028db6a6900fd014ce633fe018333f0026e2dd"
+          ]
+        },
+        {
+          "owner": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+          "owner_b58": "75hbt6uvDqjPZ9WgFtMhBnTeyHw7cinoHiz4FD2vEz2d",
+          "balance": 7,
+          "salt": "532fc9165202d251269a1aebefef40ec76d1e4392f147fdc94d61d99d14bb7c4",
+          "leaf": "a2ed14d562a5392d8936be366cb37ba7a3d617676328d562c3b7523727200e7c",
+          "proof": [
+            "5de31ac5e888e72f9f18389ff25863fa328d46785131dbb3b4a0ef799374138a",
+            "6cf13fc3738ea8013186260b868bcc4c11f41a9e6d73d88850172b8c029fae82",
+            "cd4439c3f089e2c9814261f614028db6a6900fd014ce633fe018333f0026e2dd"
+          ]
+        },
+        {
+          "owner": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "owner_b58": "CVDFLCAjXhVWiPXH9nTCTpCgVzmDVoiPzNJYuccr1dqB",
+          "balance": 1000000,
+          "salt": "961c8279cdfdbf7f414ab53cb8d5f99716a0eb059f7119bf60247496e6933033",
+          "leaf": "5de31ac5e888e72f9f18389ff25863fa328d46785131dbb3b4a0ef799374138a",
+          "proof": [
+            "a2ed14d562a5392d8936be366cb37ba7a3d617676328d562c3b7523727200e7c",
+            "6cf13fc3738ea8013186260b868bcc4c11f41a9e6d73d88850172b8c029fae82",
+            "cd4439c3f089e2c9814261f614028db6a6900fd014ce633fe018333f0026e2dd"
+          ]
+        },
+        {
+          "owner": "e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9",
+          "owner_b58": "Gk6sMAWNnVCnW6HFdc15nxpjt11tvoy4C5HtaZSb5d9i",
+          "balance": 40,
+          "salt": "59e9929d3aa1bad56afb6bd1c131f5bf90c45ba5f01bbdbdf0a6b565e01df0e4",
+          "leaf": "cd4439c3f089e2c9814261f614028db6a6900fd014ce633fe018333f0026e2dd",
+          "proof": [
+            "7616c503307724286758b90204772983081198ea2054ec5479ae9b537cc3bc77"
+          ]
+        }
+      ],
+      "register_total": 1000171,
+      "root": "4a9e9afb82054ba45809201c72b90d8b823aa05447bd4253bf425b6546b77a8d"
+    }
+  ],
+  "manifest_vector": {
+    "note": "Manifest of five_holders_sum_zero_frozen.",
+    "fields": {
+      "spec_version": 100,
+      "distribution": "d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+      "mint": "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d",
+      "record_slot": 1000000,
+      "first_covered_slot": 999000,
+      "resolved_slot": 1000040,
+      "backend": 0,
+      "rows": 5,
+      "register_total": 1000171,
+      "root": "4a9e9afb82054ba45809201c72b90d8b823aa05447bd4253bf425b6546b77a8d",
+      "salt_seed_hash": "8ae1aa597fa146ebd3aa2ceddf360668dea5e526567e92b0321816a4e895bd2d"
+    },
+    "manifest_hash": "f7b8776949c672c54a544d49b706e3ffb9442a59bf46aca46d899d642a4afe6c"
+  }
+}

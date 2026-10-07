@@ -9,3 +9,9 @@ description = "Sorted-pair keccak Merkle tree (Slotbook brief D13)"
 serde = { version = "1", features = ["derive"] }
 solana-keccak-hasher = "3.1.0"
 thiserror = "2"
+
+# Off-chain, solana-keccak-hasher only hashes with its `sha3` feature (on-chain it
+# uses the keccak syscall). Without this, keccak panics unless another crate in
+# the same build happens to enable the feature.
+[target.'cfg(not(target_os = "solana"))'.dependencies]
+solana-keccak-hasher = { version = "3.1.0", features = ["sha3"] }
