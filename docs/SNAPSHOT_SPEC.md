@@ -99,8 +99,8 @@ The issuer can close the distribution.
 Every holder is included, including any account the issuer holds itself (for
 example a treasury) and program-owned accounts (vaults, PDAs). v1 has no
 exclusion list; passing a vault's share through to its depositors is the
-vault's job. An issuer that wants a treasury
-excluded must move those tokens out before the record slot.
+vault's job. An issuer that wants a treasury excluded must move those tokens
+out before the record slot.
 
 ## 4. Reference method: ledger replay (informative)
 
