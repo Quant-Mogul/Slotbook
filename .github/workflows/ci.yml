@@ -79,11 +79,19 @@ jobs:
       - name: Default keypair for anchor
         run: solana-keygen new --no-bip39-passphrase --silent --outfile ~/.config/solana/id.json
 
+      # Fail if Cargo.lock is out of date with the manifests (before anything can rewrite it).
+      - name: Lockfile is up to date
+        run: cargo fetch --locked
+
       # anchor build must run first: the LiteSVM tests load target/deploy/slotbook.so.
       # --ignore-keys: the program keypair is (correctly) not in git, so CI would
       # otherwise fail the keypair vs declare_id check. declare_id in lib.rs stays the source of truth.
       - name: anchor build
         run: anchor build --ignore-keys
+
+      # anchor build is not --locked; fail if it rewrote Cargo.lock (dependency drift).
+      - name: Cargo.lock unchanged by build
+        run: git diff --exit-code Cargo.lock
 
       # --locked fails the job if Cargo.lock would change (catches pin drift).
       - name: cargo test
