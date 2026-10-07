@@ -1,7 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, error::SlotbookError, state::*};
+use crate::{
+    constants::*,
+    error::SlotbookError,
+    state::*,
+    utils::{is_transferable, transfer_from_pda},
+};
 
 /// UC-9. Anyone pays a held claim once the holder's account is transferable.
 #[derive(Accounts)]
@@ -63,11 +68,35 @@ pub struct ReleasePending<'info> {
     pub payment_token_program: Interface<'info, TokenInterface>,
 }
 
-// TODO(UC-9):
-// - Clock.slot < created_slot + hold_window_slots
-// - holder_mint_account Initialized and has ImmutableOwner (D10)
-// - transfer_checked amount from vault (Distribution PDA signs);
-//   pending_total -= amount, claimed_total += amount; Pending closes to payer
-pub fn handle_release_pending(_ctx: Context<ReleasePending>) -> Result<()> {
-    err!(SlotbookError::NotImplemented)
+/// UC-9 (D10, D11). A crank: pays a held claim once the holder's account is transferable.
+/// The ClaimReceipt keeps status Pending as a record of how the claim started.
+pub fn handle_release_pending(ctx: Context<ReleasePending>) -> Result<()> {
+    let slot = Clock::get()?.slot;
+    let hold = ctx.accounts.issuer_config.hold_window_slots;
+    let p = &ctx.accounts.pending;
+    let end = p.created_slot.checked_add(hold).ok_or(SlotbookError::MathOverflow)?;
+    require!(slot < end, SlotbookError::HoldWindowElapsed);
+    require!(
+        is_transferable(&ctx.accounts.holder_mint_account.to_account_info())?,
+        SlotbookError::NotTransferable
+    );
+    let amount = p.amount;
+
+    let d = &mut ctx.accounts.distribution;
+    d.pending_total = d.pending_total.checked_sub(amount).ok_or(SlotbookError::MathOverflow)?;
+    d.claimed_total = d.claimed_total.checked_add(amount).ok_or(SlotbookError::MathOverflow)?;
+
+    let id = d.id.to_le_bytes();
+    let seeds: &[&[u8]] = &[DISTRIBUTION_SEED, d.issuer_config.as_ref(), &id, &[d.bump]];
+    transfer_from_pda(
+        &ctx.accounts.payment_token_program.to_account_info(),
+        &ctx.accounts.vault.to_account_info(),
+        &ctx.accounts.payment_mint.to_account_info(),
+        &ctx.accounts.holder_payment_account.to_account_info(),
+        &d.to_account_info(),
+        &[seeds],
+        amount,
+        ctx.accounts.payment_mint.decimals,
+    )
+    // Pending closes to its payer (close = payer).
 }

@@ -41,16 +41,84 @@ pub struct CommitRoot<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// TODO(UC-4):
-// - state is Declared or Committed; Clock.slot >= record_slot + finality_margin_slots (D6)
-// - attestor in current issuer_config.attestors;
-//   bond_amount >= (active_commitments + 1) * attestor_bond (D8)
-// - spec_version == SPEC_VERSION
-// - if Committed: root and register_total must equal final_root and register_total (D2)
-// - write commitment; increment active_commitments and commitment_count
-// - quorum reached with matching roots and totals (and both backends if required):
-//   Committed, store final_root and register_total, window_end_slot = slot + window
-// - a differing root before quorum: Disputed, dispute_kind = Conflict, dispute_opened_slot (D3)
-pub fn handle_commit_root(_ctx: Context<CommitRoot>, _args: CommitArgs) -> Result<()> {
-    err!(SlotbookError::NotImplemented)
+/// UC-4 (D2, D3, D6, D8).
+///
+/// Before quorum, `distribution.final_root` and `register_total` hold the candidate:
+/// the first commitment's values. Every later commitment must match both. The
+/// candidate becomes final when `quorum` matching commitments exist.
+pub fn handle_commit_root(ctx: Context<CommitRoot>, args: CommitArgs) -> Result<()> {
+    let slot = Clock::get()?.slot;
+    let cfg = &ctx.accounts.issuer_config;
+    let attestor = ctx.accounts.attestor.key();
+    let d = &mut ctx.accounts.distribution;
+    let a = &mut ctx.accounts.attestor_account;
+
+    require!(
+        matches!(d.state, DistributionState::Declared | DistributionState::Committed),
+        SlotbookError::InvalidState
+    );
+    // D6: the program never checks finality itself; it waits a margin.
+    let earliest = d
+        .record_slot
+        .checked_add(cfg.finality_margin_slots)
+        .ok_or(SlotbookError::MathOverflow)?;
+    require!(slot >= earliest, SlotbookError::FinalityMarginNotPassed);
+
+    // D8: only the current set, and each live commitment is backed by one attestor_bond.
+    require!(cfg.attestors.contains(&attestor), SlotbookError::NotAnAttestor);
+    let needed = (a.active_commitments as u64)
+        .checked_add(1)
+        .and_then(|n| n.checked_mul(cfg.attestor_bond))
+        .ok_or(SlotbookError::MathOverflow)?;
+    require!(a.bond_amount >= needed, SlotbookError::InsufficientBond);
+
+    require!(args.spec_version == SPEC_VERSION, SlotbookError::UnsupportedSpecVersion);
+    require!(args.rows > 0 && args.register_total > 0, SlotbookError::EmptyRegister);
+    // One root per backend is not implemented yet; the sprint demo runs with it off.
+    require!(!cfg.require_both_backends, SlotbookError::NotImplemented);
+
+    let first = d.commitment_count == 0 && d.state == DistributionState::Declared;
+    let matches = args.root == d.final_root && args.register_total == d.register_total;
+    if d.state == DistributionState::Committed {
+        // D2: after quorum, a late commitment must equal the final root and total.
+        require!(matches, SlotbookError::RootMismatch);
+    }
+
+    let c = &mut ctx.accounts.commitment;
+    c.distribution = d.key();
+    c.attestor = attestor;
+    c.root = args.root;
+    c.manifest_hash = args.manifest_hash;
+    c.backend = a.backend;
+    c.register_total = args.register_total;
+    c.resolved_slot = args.resolved_slot;
+    c.first_covered_slot = args.first_covered_slot;
+    c.rows = args.rows;
+    c.spec_version = args.spec_version;
+    c.posted_slot = slot;
+    c.bump = ctx.bumps.commitment;
+
+    a.active_commitments = a.active_commitments.checked_add(1).ok_or(SlotbookError::MathOverflow)?;
+    d.commitment_count = d.commitment_count.checked_add(1).ok_or(SlotbookError::MathOverflow)?;
+
+    if d.state == DistributionState::Committed {
+        return Ok(());
+    }
+    if first {
+        d.final_root = args.root;
+        d.register_total = args.register_total;
+    } else if !matches {
+        // D3: roots differ before quorum. The resolver names the right one.
+        d.state = DistributionState::Disputed;
+        d.dispute_kind = Some(DisputeKind::Conflict);
+        d.dispute_opened_slot = slot;
+        return Ok(());
+    }
+    if d.commitment_count >= cfg.quorum as u32 {
+        d.state = DistributionState::Committed;
+        d.window_end_slot = slot
+            .checked_add(cfg.challenge_window_slots)
+            .ok_or(SlotbookError::MathOverflow)?;
+    }
+    Ok(())
 }

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, error::SlotbookError, state::*};
+use crate::{constants::*, error::SlotbookError, state::*, utils::transfer_from_wallet};
 
 /// UC-2. An attestor in the issuer's set posts its bond.
 #[derive(Accounts)]
@@ -47,10 +47,28 @@ pub struct RegisterAttestor<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// TODO(UC-2):
-// - attestor is in issuer_config.attestors
-// - transfer_checked attestor_bond into bond_vault
-// - write authority, issuer_config, bond_amount, backend, active_commitments = 0, bump
-pub fn handle_register_attestor(_ctx: Context<RegisterAttestor>, _backend: Backend) -> Result<()> {
-    err!(SlotbookError::NotImplemented)
+/// UC-2. Posts attestor_bond into the bond vault.
+pub fn handle_register_attestor(ctx: Context<RegisterAttestor>, backend: Backend) -> Result<()> {
+    let cfg = &ctx.accounts.issuer_config;
+    let attestor = ctx.accounts.attestor.key();
+    require!(cfg.attestors.contains(&attestor), SlotbookError::NotAnAttestor);
+
+    transfer_from_wallet(
+        &ctx.accounts.bond_token_program.to_account_info(),
+        &ctx.accounts.attestor_bond_account.to_account_info(),
+        &ctx.accounts.bond_mint.to_account_info(),
+        &ctx.accounts.bond_vault.to_account_info(),
+        &ctx.accounts.attestor.to_account_info(),
+        cfg.attestor_bond,
+        ctx.accounts.bond_mint.decimals,
+    )?;
+
+    let a = &mut ctx.accounts.attestor_account;
+    a.issuer_config = cfg.key();
+    a.authority = attestor;
+    a.bond_amount = cfg.attestor_bond;
+    a.backend = backend;
+    a.active_commitments = 0;
+    a.bump = ctx.bumps.attestor_account;
+    Ok(())
 }

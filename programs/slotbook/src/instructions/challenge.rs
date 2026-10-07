@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, error::SlotbookError, state::*};
+use crate::{constants::*, error::SlotbookError, state::*, utils::transfer_from_wallet};
 
 /// UC-5. Anyone disputes one owner's balance during the window, with a bond.
 #[derive(Accounts)]
@@ -59,17 +59,50 @@ pub struct CreateChallenge<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// TODO(UC-5):
-// - state is Committed and Clock.slot < window_end_slot
-// - transfer_checked challenger_bond into bond_vault
-// - write challenge (index, challenger, root = final_root, owner, claimed_balance, bond,
-//   opened_slot); owner == Pubkey::default() disputes register_total (D22)
-// - Disputed, dispute_kind = Owner, dispute_opened_slot = slot,
-//   slots_remaining = window_end_slot - slot, open_challenge_index, challenge_count += 1 (D1)
+/// UC-5 (D1, D22). Disputes one owner's balance during the window, with a bond.
+/// `owner == Pubkey::default()` disputes register_total instead (D22).
+/// `claimed_balance` is what the challenger says is correct; 0 means "should be absent",
+/// nonzero for an owner not in the tree means "was omitted" (spec section 10).
 pub fn handle_challenge(
-    _ctx: Context<CreateChallenge>,
-    _owner: Pubkey,
-    _claimed_balance: u64,
+    ctx: Context<CreateChallenge>,
+    owner: Pubkey,
+    claimed_balance: u64,
 ) -> Result<()> {
-    err!(SlotbookError::NotImplemented)
+    let slot = Clock::get()?.slot;
+    let cfg = &ctx.accounts.issuer_config;
+    let d = &mut ctx.accounts.distribution;
+
+    require!(d.state == DistributionState::Committed, SlotbookError::InvalidState);
+    require!(slot < d.window_end_slot, SlotbookError::WindowClosed);
+
+    transfer_from_wallet(
+        &ctx.accounts.bond_token_program.to_account_info(),
+        &ctx.accounts.challenger_bond_account.to_account_info(),
+        &ctx.accounts.bond_mint.to_account_info(),
+        &ctx.accounts.bond_vault.to_account_info(),
+        &ctx.accounts.challenger.to_account_info(),
+        cfg.challenger_bond,
+        ctx.accounts.bond_mint.decimals,
+    )?;
+
+    let index = d.challenge_count;
+    let c = &mut ctx.accounts.challenge;
+    c.distribution = d.key();
+    c.index = index;
+    c.challenger = ctx.accounts.challenger.key();
+    c.root = d.final_root;
+    c.owner = owner;
+    c.claimed_balance = claimed_balance;
+    c.bond = cfg.challenger_bond;
+    c.opened_slot = slot;
+    c.bump = ctx.bumps.challenge;
+
+    // The window pauses: remember how much of it was left (D5).
+    d.slots_remaining = d.window_end_slot - slot;
+    d.state = DistributionState::Disputed;
+    d.dispute_kind = Some(DisputeKind::Owner);
+    d.dispute_opened_slot = slot;
+    d.open_challenge_index = Some(index);
+    d.challenge_count = index.checked_add(1).ok_or(SlotbookError::MathOverflow)?;
+    Ok(())
 }

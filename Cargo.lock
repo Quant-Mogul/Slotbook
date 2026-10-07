@@ -4020,11 +4020,15 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "litesvm",
+ "litesvm-token",
+ "merkle",
  "serde_json",
+ "solana-account",
  "solana-keypair",
  "solana-message",
  "solana-signer",
  "solana-transaction",
+ "spl-pod",
 ]
 
 [[package]]

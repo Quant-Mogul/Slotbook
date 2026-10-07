@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, error::SlotbookError, state::*};
+use crate::{constants::*, error::SlotbookError, state::*, utils::transfer_from_pda};
 
 /// UC-10. After the hold window, the issuer takes back a still-held payout.
 #[derive(Accounts)]
@@ -60,10 +60,30 @@ pub struct SweepPending<'info> {
     pub payment_token_program: Interface<'info, TokenInterface>,
 }
 
-// TODO(UC-10):
-// - Clock.slot >= created_slot + hold_window_slots
-// - transfer_checked amount from vault to the issuer (Distribution PDA signs);
-//   pending_total -= amount, swept_total += amount; Pending closes to payer
-pub fn handle_sweep_pending(_ctx: Context<SweepPending>) -> Result<()> {
-    err!(SlotbookError::NotImplemented)
+/// UC-10. After the hold window, a still-held payout returns to the issuer.
+pub fn handle_sweep_pending(ctx: Context<SweepPending>) -> Result<()> {
+    let slot = Clock::get()?.slot;
+    let hold = ctx.accounts.issuer_config.hold_window_slots;
+    let p = &ctx.accounts.pending;
+    let end = p.created_slot.checked_add(hold).ok_or(SlotbookError::MathOverflow)?;
+    require!(slot >= end, SlotbookError::HoldWindowNotElapsed);
+    let amount = p.amount;
+
+    let d = &mut ctx.accounts.distribution;
+    d.pending_total = d.pending_total.checked_sub(amount).ok_or(SlotbookError::MathOverflow)?;
+    d.swept_total = d.swept_total.checked_add(amount).ok_or(SlotbookError::MathOverflow)?;
+
+    let id = d.id.to_le_bytes();
+    let seeds: &[&[u8]] = &[DISTRIBUTION_SEED, d.issuer_config.as_ref(), &id, &[d.bump]];
+    transfer_from_pda(
+        &ctx.accounts.payment_token_program.to_account_info(),
+        &ctx.accounts.vault.to_account_info(),
+        &ctx.accounts.payment_mint.to_account_info(),
+        &ctx.accounts.issuer_payment_account.to_account_info(),
+        &d.to_account_info(),
+        &[seeds],
+        amount,
+        ctx.accounts.payment_mint.decimals,
+    )
+    // Pending closes to its payer (close = payer), D11.
 }

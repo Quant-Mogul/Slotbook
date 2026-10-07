@@ -1,7 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, error::SlotbookError, state::*};
+use crate::{
+    constants::*,
+    error::SlotbookError,
+    state::*,
+    utils::{create_pda_account, is_transferable, transfer_from_pda},
+};
 
 /// UC-8. The leaf owner claims: paid now, or held in Pending if their account is frozen.
 #[derive(Accounts)]
@@ -73,22 +78,103 @@ pub struct Claim<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// TODO(UC-8):
-// - state is Open and Clock.slot < open_slot + claim_expiry_slots (D10)
-// - proof.len() <= MAX_PROOF_DEPTH; leaf = merkle::leaf_hash(holder, balance, salt);
-//   fold siblings with merkle::parent; must equal final_root (spec sections 6 to 8)
-// - payout = floor(total * balance / register_total) in u128 (D20)
-// - write claim_receipt
-// - holder_mint_account Initialized and has ImmutableOwner: transfer_checked payout from vault
-//   (Distribution PDA signs), claimed_total += payout, status Paid
-// - otherwise: create Pending (amount, created_slot, payer = holder), pending_total += payout,
-//   status Pending (D10, D11)
-// - claimed_total + pending_total + swept_total <= total (D20)
+/// UC-8 (D10, D11, D13, D20). Verifies the holder's leaf against `final_root`
+/// (spec sections 6 to 8), computes the payout on-chain, then pays or holds it.
 pub fn handle_claim(
-    _ctx: Context<Claim>,
-    _balance: u64,
-    _salt: [u8; 32],
-    _proof: Vec<[u8; 32]>,
+    ctx: Context<Claim>,
+    balance: u64,
+    salt: [u8; 32],
+    proof: Vec<[u8; 32]>,
 ) -> Result<()> {
-    err!(SlotbookError::NotImplemented)
+    let slot = Clock::get()?.slot;
+    let holder = ctx.accounts.holder.key();
+    let cfg = &ctx.accounts.issuer_config;
+    let d = &mut ctx.accounts.distribution;
+
+    require!(d.state == DistributionState::Open, SlotbookError::InvalidState);
+    let expiry = d
+        .open_slot
+        .checked_add(cfg.claim_expiry_slots)
+        .ok_or(SlotbookError::MathOverflow)?;
+    require!(slot < expiry, SlotbookError::ClaimExpired);
+
+    // Spec section 8: siblings only, bottom-up, at most 32. The leaf is built here
+    // from the signer, so a caller can only prove a row about their own wallet.
+    require!(proof.len() <= MAX_PROOF_DEPTH as usize, SlotbookError::ProofTooDeep);
+    let leaf = merkle::leaf_hash(&holder.to_bytes(), balance, &salt);
+    let root = proof.iter().fold(leaf, |h, s| merkle::parent(&h, s));
+    require!(root == d.final_root, SlotbookError::InvalidProof);
+
+    // D20: floor(total * balance / register_total), in u128.
+    let payout = (d.total as u128)
+        .checked_mul(balance as u128)
+        .and_then(|x| x.checked_div(d.register_total as u128))
+        .and_then(|x| u64::try_from(x).ok())
+        .ok_or(SlotbookError::MathOverflow)?;
+
+    let transferable = is_transferable(&ctx.accounts.holder_mint_account.to_account_info())?;
+
+    let r = &mut ctx.accounts.claim_receipt;
+    r.distribution = d.key();
+    r.owner = holder;
+    r.balance = balance;
+    r.payout = payout;
+    r.bump = ctx.bumps.claim_receipt;
+
+    if transferable {
+        r.status = ClaimStatus::Paid;
+        d.claimed_total = d.claimed_total.checked_add(payout).ok_or(SlotbookError::MathOverflow)?;
+        let id = d.id.to_le_bytes();
+        let seeds: &[&[u8]] = &[
+            DISTRIBUTION_SEED,
+            d.issuer_config.as_ref(),
+            &id,
+            &[d.bump],
+        ];
+        transfer_from_pda(
+            &ctx.accounts.payment_token_program.to_account_info(),
+            &ctx.accounts.vault.to_account_info(),
+            &ctx.accounts.payment_mint.to_account_info(),
+            &ctx.accounts.holder_payment_account.to_account_info(),
+            &d.to_account_info(),
+            &[seeds],
+            payout,
+            ctx.accounts.payment_mint.decimals,
+        )?;
+    } else {
+        // D10, D11: frozen (or not ImmutableOwner) means held, not paid and not forfeited.
+        r.status = ClaimStatus::Pending;
+        d.pending_total = d.pending_total.checked_add(payout).ok_or(SlotbookError::MathOverflow)?;
+        let distribution_key = d.key();
+        let bump = [ctx.bumps.pending];
+        let seeds: &[&[u8]] = &[PENDING_SEED, distribution_key.as_ref(), holder.as_ref(), &bump];
+        let space = 8 + Pending::INIT_SPACE;
+        create_pda_account(
+            &ctx.accounts.holder.to_account_info(),
+            &ctx.accounts.pending.to_account_info(),
+            &[seeds],
+            space,
+            &crate::ID,
+        )?;
+        let pending = Pending {
+            distribution: distribution_key,
+            owner: holder,
+            amount: payout,
+            created_slot: slot,
+            payer: holder,
+            bump: ctx.bumps.pending,
+        };
+        let info = ctx.accounts.pending.to_account_info();
+        let mut data = info.try_borrow_mut_data()?;
+        pending.try_serialize(&mut &mut data[..])?;
+    }
+
+    // D20 invariant.
+    let committed = d
+        .claimed_total
+        .checked_add(d.pending_total)
+        .and_then(|x| x.checked_add(d.swept_total))
+        .ok_or(SlotbookError::MathOverflow)?;
+    require!(committed <= d.total, SlotbookError::InvariantViolated);
+    Ok(())
 }

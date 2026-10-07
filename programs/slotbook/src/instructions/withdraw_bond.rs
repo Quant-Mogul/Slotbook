@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, error::SlotbookError, state::*};
+use crate::{constants::*, error::SlotbookError, state::*, utils::transfer_from_pda};
 
 /// UC-13. An attestor with no live commitments takes its bond back and deregisters.
 #[derive(Accounts)]
@@ -46,10 +46,25 @@ pub struct WithdrawBond<'info> {
     pub bond_token_program: Interface<'info, TokenInterface>,
 }
 
-// TODO(UC-13, D8):
-// - active_commitments == 0
-// - transfer_checked bond_amount (may be zero after a slash) from bond_vault
-//   (IssuerConfig PDA signs); Attestor closes to the attestor
-pub fn handle_withdraw_bond(_ctx: Context<WithdrawBond>) -> Result<()> {
-    err!(SlotbookError::NotImplemented)
+/// UC-13 (D8). Returns whatever bond is left (zero after a slash) and deregisters.
+pub fn handle_withdraw_bond(ctx: Context<WithdrawBond>) -> Result<()> {
+    let a = &ctx.accounts.attestor_account;
+    require!(a.active_commitments == 0, SlotbookError::LiveCommitments);
+    let amount = a.bond_amount;
+    if amount > 0 {
+        let cfg = &ctx.accounts.issuer_config;
+        let seeds: &[&[u8]] = &[ISSUER_SEED, cfg.mint.as_ref(), &[cfg.bump]];
+        transfer_from_pda(
+            &ctx.accounts.bond_token_program.to_account_info(),
+            &ctx.accounts.bond_vault.to_account_info(),
+            &ctx.accounts.bond_mint.to_account_info(),
+            &ctx.accounts.attestor_bond_account.to_account_info(),
+            &cfg.to_account_info(),
+            &[seeds],
+            amount,
+            ctx.accounts.bond_mint.decimals,
+        )?;
+    }
+    // The Attestor account closes to the attestor (close = attestor).
+    Ok(())
 }

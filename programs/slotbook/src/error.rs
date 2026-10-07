@@ -12,6 +12,8 @@ pub enum SlotbookError {
     FreezeAuthorityNotTokenAcl,
     #[msg("Mint must carry DefaultAccountState")]
     MissingDefaultAccountState,
+    #[msg("Mint DefaultAccountState must be Frozen")]
+    DefaultStateNotFrozen,
     #[msg("Mints with the confidential-transfer extension are not supported")]
     ConfidentialTransferMint,
     #[msg("Invalid issuer parameters")]
@@ -32,6 +34,8 @@ pub enum SlotbookError {
     RecordSlotTooSoon,
     #[msg("Payment mint has a disallowed extension")]
     UnsupportedPaymentMint,
+    #[msg("Bond mint has a disallowed extension")]
+    UnsupportedBondMint,
     #[msg("Distribution is not in the required state")]
     InvalidState,
     #[msg("Distribution cannot be closed yet")]
@@ -50,6 +54,8 @@ pub enum SlotbookError {
     UnsupportedSpecVersion,
     #[msg("Attestor still has live commitments")]
     LiveCommitments,
+    #[msg("Register is empty; nothing to commit (spec 3.7)")]
+    EmptyRegister,
 
     // Challenges (UC-5, UC-6; D1, D3, D4, D5, D17, D22)
     #[msg("Challenge window is closed")]
@@ -64,6 +70,8 @@ pub enum SlotbookError {
     CommitmentSetMismatch,
     #[msg("Challenge account does not match the open challenge")]
     WrongChallenge,
+    #[msg("Ruling does not fit this kind of dispute")]
+    InvalidRuling,
 
     // Claims (UC-8, UC-9, UC-10; D10, D11, D13, D20)
     #[msg("Claim period has expired")]

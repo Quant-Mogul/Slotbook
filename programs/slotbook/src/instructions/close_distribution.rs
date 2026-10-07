@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{close_account, CloseAccount, Mint, TokenAccount, TokenInterface};
 
-use crate::{constants::*, error::SlotbookError, state::*};
+use crate::{constants::*, error::SlotbookError, state::*, utils::transfer_from_pda};
 
 /// UC-11. The issuer empties and closes the vault. The Distribution stays, as Closed (D7).
 #[derive(Accounts)]
@@ -47,11 +47,61 @@ pub struct CloseDistribution<'info> {
     pub payment_token_program: Interface<'info, TokenInterface>,
 }
 
-// TODO(UC-11, D7):
-// - (Open, pending_total == 0, Clock.slot >= open_slot + claim_expiry_slots) or
-//   (Declared, commitment_count == 0 or Clock.slot >= record_slot + claim_expiry_slots)
-// - transfer the vault balance (dust included) to the issuer, close the vault
-//   (Distribution PDA signs); state Closed; active_distributions -= 1
-pub fn handle_close_distribution(_ctx: Context<CloseDistribution>) -> Result<()> {
-    err!(SlotbookError::NotImplemented)
+/// UC-11 (D7). Empties the vault to the issuer (dust included), closes it, marks Closed.
+/// The Distribution account stays so attestors can still be released.
+pub fn handle_close_distribution(ctx: Context<CloseDistribution>) -> Result<()> {
+    let slot = Clock::get()?.slot;
+    let cfg = &mut ctx.accounts.issuer_config;
+    let d = &mut ctx.accounts.distribution;
+
+    let allowed = match d.state {
+        DistributionState::Open => {
+            let expiry = d
+                .open_slot
+                .checked_add(cfg.claim_expiry_slots)
+                .ok_or(SlotbookError::MathOverflow)?;
+            d.pending_total == 0 && slot >= expiry
+        }
+        DistributionState::Declared => {
+            let expiry = d
+                .record_slot
+                .checked_add(cfg.claim_expiry_slots)
+                .ok_or(SlotbookError::MathOverflow)?;
+            d.commitment_count == 0 || slot >= expiry
+        }
+        _ => false,
+    };
+    require!(allowed, SlotbookError::CannotClose);
+
+    let id = d.id.to_le_bytes();
+    let seeds: &[&[u8]] = &[DISTRIBUTION_SEED, d.issuer_config.as_ref(), &id, &[d.bump]];
+    let remaining = ctx.accounts.vault.amount;
+    if remaining > 0 {
+        transfer_from_pda(
+            &ctx.accounts.payment_token_program.to_account_info(),
+            &ctx.accounts.vault.to_account_info(),
+            &ctx.accounts.payment_mint.to_account_info(),
+            &ctx.accounts.issuer_payment_account.to_account_info(),
+            &d.to_account_info(),
+            &[seeds],
+            remaining,
+            ctx.accounts.payment_mint.decimals,
+        )?;
+    }
+    close_account(CpiContext::new_with_signer(
+        ctx.accounts.payment_token_program.key(),
+        CloseAccount {
+            account: ctx.accounts.vault.to_account_info(),
+            destination: ctx.accounts.authority.to_account_info(),
+            authority: d.to_account_info(),
+        },
+        &[seeds],
+    ))?;
+
+    d.state = DistributionState::Closed;
+    cfg.active_distributions = cfg
+        .active_distributions
+        .checked_sub(1)
+        .ok_or(SlotbookError::MathOverflow)?;
+    Ok(())
 }

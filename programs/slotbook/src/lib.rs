@@ -2,6 +2,7 @@ pub mod constants;
 pub mod error;
 pub mod instructions;
 pub mod state;
+pub mod utils;
 
 use anchor_lang::prelude::*;
 
@@ -60,7 +61,10 @@ pub mod slotbook {
         instructions::challenge::handle_challenge(ctx, owner, claimed_balance)
     }
 
-    pub fn resolve_challenge(ctx: Context<ResolveChallenge>, ruling: Ruling) -> Result<()> {
+    pub fn resolve_challenge<'info>(
+        ctx: Context<'info, ResolveChallenge<'info>>,
+        ruling: Ruling,
+    ) -> Result<()> {
         instructions::resolve_challenge::handle_resolve_challenge(ctx, ruling)
     }
 

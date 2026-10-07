@@ -13,9 +13,13 @@ pub struct Finalize<'info> {
     pub distribution: Box<Account<'info, Distribution>>,
 }
 
-// TODO(UC-7):
-// - state is Committed and Clock.slot >= window_end_slot
-// - state Open, open_slot = slot
-pub fn handle_finalize(_ctx: Context<Finalize>) -> Result<()> {
-    err!(SlotbookError::NotImplemented)
+/// UC-7. A crank: no signer beyond the fee payer.
+pub fn handle_finalize(ctx: Context<Finalize>) -> Result<()> {
+    let slot = Clock::get()?.slot;
+    let d = &mut ctx.accounts.distribution;
+    require!(d.state == DistributionState::Committed, SlotbookError::InvalidState);
+    require!(slot >= d.window_end_slot, SlotbookError::WindowNotElapsed);
+    d.state = DistributionState::Open;
+    d.open_slot = slot;
+    Ok(())
 }
