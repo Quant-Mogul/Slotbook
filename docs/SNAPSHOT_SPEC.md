@@ -52,15 +52,24 @@ attestor must refuse any other mint.
 
 The register is read from the state of the ledger **after every successful
 transaction in slots `<= record_slot`**, at finalized commitment. Failed
-transactions are ignored. If `record_slot` was skipped (no block), the state is
-the state after the last block before it.
+transactions are ignored. Order inside a slot is the transaction's position in
+the block.
+
+`resolved_slot` names the block boundary used: `record_slot` if a block was
+produced in it; otherwise the first finalized slot after `record_slot` that has
+a block. In the skipped case the register is the state **before** that block's
+transactions, which is the same as the state after the last block before
+`record_slot`.
 
 ### 3.4 Rows
 
 1. Take every token account whose mint is `mint` and that exists in that state.
    Closed accounts do not exist and are not included.
 2. For each, read its `owner` field (the wallet; not a delegate and not the
-   close authority) and its raw `amount`.
+   close authority) and its raw `amount`. Raw means base units: for
+   interest-bearing mints, never the UI amount; for transfer-fee mints, withheld
+   amounts are excluded. An account closed and reopened at the same address
+   restarts at zero.
 3. Group by owner and sum the amounts. An owner holding several token accounts
    gets one row.
 4. Drop rows whose sum is 0.
@@ -88,7 +97,9 @@ The issuer can close the distribution.
 ### 3.8 Known limitation (v1)
 
 Every holder is included, including any account the issuer holds itself (for
-example a treasury). v1 has no exclusion list. An issuer that wants a treasury
+example a treasury) and program-owned accounts (vaults, PDAs). v1 has no
+exclusion list; passing a vault's share through to its depositors is the
+vault's job. An issuer that wants a treasury
 excluded must move those tokens out before the record slot.
 
 ## 4. Reference method: ledger replay (informative)
@@ -107,8 +118,10 @@ This is how the reference attestor reaches the state in 3.3. Other methods
    `getBlock(slot)` (with `transactionDetails: "signatures"`, the `signatures`
    array). Never order by fetch order.
 4. For each successful transaction, set each discovered account's owner and
-   amount from its post-transaction token balance. An account present before the
-   transaction and absent after it was closed.
+   amount from its post-transaction token balance. Balances come from this
+   pre/post token balance metadata, not from decoding instructions; decoding is
+   used only for discovery and for freeze and thaw state. An account present
+   before the transaction and absent after it was closed.
 5. Stop after the last transaction in a slot `<= record_slot`, then apply 3.4.
 
 ## 5. Salt
@@ -122,7 +135,9 @@ salt = keccak256( "slotbook-salt-v1" || distribution || owner || salt_seed )
 - `distribution` binds every leaf to one distribution, so a proof can never be
   reused in another.
 - Salts are derived, not random, so independent attestors produce the same root
-  (scope D12). Only the issuer, attestors and resolver know `salt_seed`.
+  (scope D12). Only the issuer, attestors and resolver know `salt_seed`. The
+  issuer releases it to an auditor on request; the auditor checks it against
+  `Distribution.salt_seed_hash`.
 - The salt stops anyone without the seed from testing guesses against the root
   or proofs. It is not strong privacy: balances at a slot are public on-chain.
 
@@ -202,7 +217,7 @@ The attestor publishes a manifest with each commitment and stores
 | 3 | `mint` | 32 bytes | the mint |
 | 4 | `record_slot` | `u64_le` | from the Distribution |
 | 5 | `first_covered_slot` | `u64_le` | slot of the mint's creation transaction; replay must start there |
-| 6 | `resolved_slot` | `u64_le` | finalized slot at which the ledger was read; `>= record_slot + finality_margin_slots` |
+| 6 | `resolved_slot` | `u64_le` | block boundary used for the register (section 3.3) |
 | 7 | `backend` | `u8` | 0 = LedgerReplay, 1 = StateArchive |
 | 8 | `rows` | `u32_le` | number of rows |
 | 9 | `register_total` | `u64_le` | section 3.6 |
@@ -245,3 +260,11 @@ manifest. Key values:
 The five-holder tree covers summing (one owner, two accounts), a zero balance
 (dropped), a frozen holder (included), unsorted input, and odd-node promotion
 at two levels.
+
+### 13.1 Still to add: replay vectors
+
+These vectors start from token accounts. The LOI also requires vectors that
+start from ledger history, to pin down section 3.3 and 4: a closed account, an
+account reopened at the same address, a failed transaction, a skipped
+`record_slot`, and an empty register. They need a scripted transaction history
+and are a follow-up for the attestor track.
