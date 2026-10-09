@@ -1,6 +1,6 @@
 [workspace]
 members = [ "crates/attestor", "crates/merkle", "crates/snapshot",
-    "programs/*"
+    "programs/*", "scripts/issuer"
 ]
 resolver = "2"
 
