@@ -1,7 +1,0 @@
-{
-  "comment": "Independent leaf vector from team brief D12–D13. salt = keccak256(\"slotbook-salt-v1\" || distribution || owner || salt_seed). leaf = keccak256(0x00 || keccak256(owner || balance_le_u64 || salt)).",
-  "distribution": [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],
-  "owner": [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  "salt_seed": [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
-  "balance": 1000
-}

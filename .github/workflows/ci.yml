@@ -37,6 +37,12 @@ jobs:
           check litesvm 0.10.0
           check solana-keccak-hasher 3.1.0
 
+      # Spec vectors: the independent Python generator must reproduce the committed JSON.
+      - name: Spec vectors match generator
+        run: |
+          python3 docs/vectors/gen_snapshot_vectors.py
+          git diff --exit-code docs/vectors
+
       # Installs the toolchain named in rust-toolchain.toml (1.89.0).
       - name: Install Rust from rust-toolchain.toml
         run: rustup show active-toolchain || rustup toolchain install
