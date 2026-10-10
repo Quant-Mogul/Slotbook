@@ -7,3 +7,4 @@ test-ledger
 .yarn
 .surfpool
 **/*-keypair.json
+scripts/state/
