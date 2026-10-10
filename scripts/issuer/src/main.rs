@@ -29,6 +29,7 @@ const TOKEN_2022_PROGRAM: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 const TOKEN_ACL_GATE: &str = "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz";
 const DECIMALS: u8 = 6;
 const MINT_SPACE: usize = 512;
+const DEFAULT_RPC_URL: &str = "https://api.devnet.solana.com";
 
 #[derive(Parser)]
 #[command(
@@ -36,8 +37,8 @@ const MINT_SPACE: usize = 512;
     about = "Slotbook issuer-side devnet setup and history scripts"
 )]
 struct Cli {
-    #[arg(long, default_value = "https://api.devnet.solana.com")]
-    rpc_url: String,
+    #[arg(long)]
+    rpc_url: Option<String>,
     #[arg(long, default_value = "~/.config/solana/id.json")]
     payer: String,
     #[command(subcommand)]
@@ -77,6 +78,8 @@ struct IssuerState {
     mint_keypair: String,
     list_config: String,
     holders: Vec<HolderState>,
+    #[serde(default)]
+    initial_phase_completed: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -94,8 +97,15 @@ fn main() -> Result<()> {
         command,
     } = Cli::parse();
     match command {
-        CommandKind::Setup { output, holders } => setup(&rpc_url, &payer, &output, holders),
-        CommandKind::Transfers { state, phase } => transfers(&rpc_url, &payer, &state, phase),
+        CommandKind::Setup { output, holders } => setup(
+            rpc_url.as_deref().unwrap_or(DEFAULT_RPC_URL),
+            &payer,
+            &output,
+            holders,
+        ),
+        CommandKind::Transfers { state, phase } => {
+            transfers(rpc_url.as_deref(), &payer, &state, phase)
+        }
     }
 }
 
@@ -201,6 +211,7 @@ fn setup(rpc_url: &str, payer_path: &str, output: &Path, holder_count: usize) ->
         mint_keypair: mint_path.display().to_string(),
         list_config,
         holders: holder_states,
+        initial_phase_completed: false,
     };
     fs::write(output, serde_json::to_vec_pretty(&state)?)?;
     println!("mint: {}", state.mint);
@@ -213,20 +224,24 @@ fn setup(rpc_url: &str, payer_path: &str, output: &Path, holder_count: usize) ->
 }
 
 fn transfers(
-    default_rpc_url: &str,
+    rpc_url_override: Option<&str>,
     payer_path: &str,
     state_path: &Path,
     phase: TransferPhase,
 ) -> Result<()> {
-    let state: IssuerState = serde_json::from_slice(&fs::read(state_path)?)?;
-    let rpc = RpcClient::new(
-        if state.rpc_url.is_empty() {
-            default_rpc_url
-        } else {
-            &state.rpc_url
-        }
-        .to_string(),
-    );
+    let mut state: IssuerState = serde_json::from_slice(&fs::read(state_path)?)?;
+    if matches!(phase, TransferPhase::Initial) && state.initial_phase_completed {
+        bail!("initial phase already completed; use --phase pre-record to add known transfers");
+    }
+    let rpc_url =
+        rpc_url_override
+            .filter(|url| !url.is_empty())
+            .unwrap_or(if state.rpc_url.is_empty() {
+                DEFAULT_RPC_URL
+            } else {
+                &state.rpc_url
+            });
+    let rpc = RpcClient::new(rpc_url.to_string());
     let payer = load_keypair(payer_path)?;
     let mint = Pubkey::from_str(&state.mint)?;
     let mint_authority = payer.pubkey();
@@ -300,9 +315,11 @@ fn transfers(
         let _ = run_external(
             "token-acl",
             &["freeze", &state.mint, &frozen.token_account],
-            &state.rpc_url,
+            rpc_url,
             payer_path,
         )?;
+        state.initial_phase_completed = true;
+        fs::write(state_path, serde_json::to_vec_pretty(&state)?)?;
     }
     let last_slot = rpc.get_slot()?;
     println!("mint: {}", state.mint);
@@ -311,9 +328,11 @@ fn transfers(
         println!("frozen holder: {}", state.holders[4].name);
     }
     println!("latest slot: {}", last_slot);
-    println!(
-        "history transfers complete; rerun after declaring a distribution to extend the history"
-    );
+    if matches!(phase, TransferPhase::Initial) {
+        println!("initial history complete; use --phase pre-record after declaring a distribution");
+    } else {
+        println!("pre-record history complete; stop transfers before choosing the record slot");
+    }
     Ok(())
 }
 

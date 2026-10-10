@@ -34,12 +34,12 @@ cargo run -p issuer-scripts -- \
   setup --output scripts/state/issuer.json --holders 5
 cargo run -p issuer-scripts -- \
   --rpc-url http://127.0.0.1:8899 \
-  transfers --state scripts/state/issuer.json
+  transfers --phase initial --state scripts/state/issuer.json
 ```
 
 The setup command creates the mint, initializes frozen default accounts and Token Metadata, configures the gate, creates an allow list, and creates one Token-2022 associated account per holder. Token-2022 associated accounts use the immutable-owner extension path required by the claim design.
 
-The transfers command mints to the first three holders, performs ten deterministic transfers, freezes holder four through Token ACL, and prints the latest observed slot as a record-slot candidate. Run it again only when intentionally extending the known history.
+The initial phase mints to the first three holders, performs ten deterministic transfers, freezes holder four through Token ACL, and prints the latest observed slot as a record-slot candidate. It records completion in the state file and refuses to run a second time.
 
 After declaring a distribution, use the separate pre-record batch before selecting the final record slot:
 
@@ -61,7 +61,7 @@ cargo run -p issuer-scripts -- \
   setup --output scripts/state/issuer.json --holders 5
 cargo run -p issuer-scripts -- \
   --rpc-url https://api.devnet.solana.com \
-  transfers --state scripts/state/issuer.json
+  transfers --phase initial --state scripts/state/issuer.json
 ```
 
 Save the printed mint, holder owners, token accounts, and slot in the demo notes. Share the mint and transfer schedule with the attestor owner before choosing the final record slot so replay uses a history that the issuer controls and understands.

@@ -14,7 +14,7 @@ Run the issuer setup and history scripts from the repository root:
 
 ```bash
 cargo run -p issuer-scripts -- setup --output scripts/state/issuer.json --holders 5
-cargo run -p issuer-scripts -- transfers --state scripts/state/issuer.json
+cargo run -p issuer-scripts -- transfers --phase initial --state scripts/state/issuer.json
 ```
 
 For Surfpool, add `--rpc-url http://127.0.0.1:8899`. For devnet, ensure the payer has SOL and acquire devnet USDC separately for the later vault and claim demonstration.
