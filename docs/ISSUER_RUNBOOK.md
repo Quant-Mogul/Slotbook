@@ -22,22 +22,21 @@ cargo check -p issuer-scripts
 cargo run -p issuer-scripts -- --help
 ```
 
-The package is `issuer-scripts` at `scripts/issuer`. Its commands only send transactions when explicitly run.
+The package is `issuer-scripts` at `scripts/issuer`. Its commands only send transactions when explicitly run. The deterministic demo supports exactly five holders.
 
 ## Surfpool setup
 
-Run the local validator with the Token ACL and ABL Gate programs loaded, then point the script at that RPC:
+Use the checked-in Surfpool runbooks. Surfpool forks devnet, and the Token ACL and ABL Gate programs are fetched when the ACL transactions need them:
 
 ```bash
-cargo run -p issuer-scripts -- \
-  --rpc-url http://127.0.0.1:8899 \
-  setup --output scripts/state/issuer.json --holders 5
-cargo run -p issuer-scripts -- \
-  --rpc-url http://127.0.0.1:8899 \
-  transfers --phase initial --state scripts/state/issuer.json
+scripts/surfpool/start.sh
+scripts/surfpool/issuer-setup.sh
+scripts/surfpool/issuer-transfers.sh initial
 ```
 
-The setup command creates the mint, initializes frozen default accounts and Token Metadata, configures the gate, creates an allow list, and creates one Token-2022 associated account per holder. Token-2022 associated accounts use the immutable-owner extension path required by the claim design.
+The start command stays in the foreground on macOS. Use `RPC_PORT`, `WS_PORT`, and `RPC_URL` when running on different ports.
+
+The setup command creates the mint, initializes frozen default accounts and Token Metadata, configures the gate, creates an allow list, and creates one Token-2022 associated account per holder. Token-2022 associated accounts use the immutable-owner extension path required by the claim design. Surfpool uses an in-memory ledger, so rerun setup after restarting Surfpool before using a state file.
 
 The initial phase mints to the first three holders, performs ten deterministic transfers, freezes holder four through Token ACL, and prints the latest observed slot as a record-slot candidate. It records completion in the state file and refuses to run a second time.
 
@@ -49,7 +48,7 @@ cargo run -p issuer-scripts -- \
   transfers --phase pre-record --state scripts/state/issuer.json
 ```
 
-The `pre-record` phase performs three additional known transfers and does not mint or repeat the freeze operation.
+The `pre-record` phase performs three additional known transfers and does not mint or repeat the freeze operation. Both phases are one-shot; the script records completion only after balance and freeze-state assertions pass.
 
 ## Devnet run
 

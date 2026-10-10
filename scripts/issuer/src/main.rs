@@ -1,9 +1,11 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use solana_client::rpc_client::RpcClient;
+use solana_commitment_config::CommitmentConfig;
 use solana_instruction::Instruction;
 use solana_keypair::{read_keypair_file, write_keypair_file, Keypair};
+use solana_program_option::COption;
 use solana_pubkey::Pubkey;
 use solana_signer::Signer;
 use solana_system_interface::instruction::create_account;
@@ -11,13 +13,17 @@ use solana_transaction::Transaction;
 use spl_associated_token_account_interface::address::get_associated_token_address_with_program_id;
 use spl_token_2022_interface::{
     extension::{
-        default_account_state::instruction as default_state,
+        default_account_state::{instruction as default_state, DefaultAccountState},
         metadata_pointer::instruction as metadata_pointer,
+        BaseStateWithExtensions, ExtensionType, StateWithExtensions,
     },
     instruction as token_instruction,
-    state::AccountState,
+    state::{Account as TokenAccount, AccountState, Mint},
 };
-use spl_token_metadata_interface::{instruction as metadata_instruction, state::Field};
+use spl_token_metadata_interface::{
+    instruction as metadata_instruction,
+    state::{Field, TokenMetadata},
+};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -27,8 +33,9 @@ use std::{
 
 const TOKEN_2022_PROGRAM: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 const TOKEN_ACL_GATE: &str = "GATEzzqxhJnsWF6vHRsgtixxSB8PaQdcqGEVTEHWiULz";
+const TOKEN_ACL_CLI: &str = "token-acl-cli";
+const TOKEN_ACL_GATE_CLI: &str = "token-acl-gate-cli";
 const DECIMALS: u8 = 6;
-const MINT_SPACE: usize = 512;
 const DEFAULT_RPC_URL: &str = "https://api.devnet.solana.com";
 
 #[derive(Parser)]
@@ -80,6 +87,8 @@ struct IssuerState {
     holders: Vec<HolderState>,
     #[serde(default)]
     initial_phase_completed: bool,
+    #[serde(default)]
+    pre_record_phase_completed: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -110,8 +119,8 @@ fn main() -> Result<()> {
 }
 
 fn setup(rpc_url: &str, payer_path: &str, output: &Path, holder_count: usize) -> Result<()> {
-    if holder_count < 5 {
-        bail!("the demo requires at least five holders");
+    if holder_count != 5 {
+        bail!("the deterministic demo requires exactly five holders");
     }
     let payer = load_keypair(payer_path)?;
     let rpc = RpcClient::new(rpc_url.to_string());
@@ -127,7 +136,7 @@ fn setup(rpc_url: &str, payer_path: &str, output: &Path, holder_count: usize) ->
         .map_err(|e| anyhow::anyhow!("could not write mint keypair: {e}"))?;
 
     let acl_output = run_external(
-        "token-acl",
+        TOKEN_ACL_CLI,
         &[
             "create-config",
             &mint_address.to_string(),
@@ -138,7 +147,7 @@ fn setup(rpc_url: &str, payer_path: &str, output: &Path, holder_count: usize) ->
         payer_path,
     )?;
     let _ = run_external(
-        "token-acl",
+        TOKEN_ACL_CLI,
         &[
             "set-instructions",
             "--enable-thaw",
@@ -150,16 +159,16 @@ fn setup(rpc_url: &str, payer_path: &str, output: &Path, holder_count: usize) ->
     )?;
 
     let list_output = run_external(
-        "allow-block-list",
+        TOKEN_ACL_GATE_CLI,
         &["create-list", "--mode", "allow"],
         rpc_url,
         payer_path,
     )?;
     let list_config = parse_field(&list_output, "list_config:")
         .or_else(|| parse_field(&list_output, "List config:"))
-        .context("allow-block-list did not print a list_config address")?;
+        .context("token-acl-gate-cli did not print a list_config address")?;
     let _ = run_external(
-        "allow-block-list",
+        TOKEN_ACL_GATE_CLI,
         &[
             "apply-lists-to-mint",
             &mint_address.to_string(),
@@ -177,13 +186,13 @@ fn setup(rpc_url: &str, payer_path: &str, output: &Path, holder_count: usize) ->
             .map_err(|e| anyhow::anyhow!("could not write holder keypair: {e}"))?;
         let owner = holder.pubkey();
         let _ = run_external(
-            "allow-block-list",
+            TOKEN_ACL_GATE_CLI,
             &["add-wallet", &list_config, &owner.to_string()],
             rpc_url,
             payer_path,
         )?;
         let _ = run_external(
-            "token-acl",
+            TOKEN_ACL_CLI,
             &[
                 "create-ata-and-thaw-permissionless",
                 "--mint",
@@ -204,6 +213,23 @@ fn setup(rpc_url: &str, payer_path: &str, output: &Path, holder_count: usize) ->
         });
     }
 
+    let holder_accounts: Vec<_> = holder_states
+        .iter()
+        .map(|holder| {
+            Ok((
+                Pubkey::from_str(&holder.owner)?,
+                Pubkey::from_str(&holder.token_account)?,
+            ))
+        })
+        .collect::<Result<_>>()?;
+    assert_mint_and_holders(
+        &rpc,
+        &mint_address,
+        &payer.pubkey(),
+        DECIMALS,
+        &holder_accounts,
+    )?;
+
     let state = IssuerState {
         rpc_url: rpc_url.to_string(),
         mint: mint_address.to_string(),
@@ -212,6 +238,7 @@ fn setup(rpc_url: &str, payer_path: &str, output: &Path, holder_count: usize) ->
         list_config,
         holders: holder_states,
         initial_phase_completed: false,
+        pre_record_phase_completed: false,
     };
     fs::write(output, serde_json::to_vec_pretty(&state)?)?;
     println!("mint: {}", state.mint);
@@ -230,8 +257,14 @@ fn transfers(
     phase: TransferPhase,
 ) -> Result<()> {
     let mut state: IssuerState = serde_json::from_slice(&fs::read(state_path)?)?;
-    if matches!(phase, TransferPhase::Initial) && state.initial_phase_completed {
-        bail!("initial phase already completed; use --phase pre-record to add known transfers");
+    match phase {
+        TransferPhase::Initial if state.initial_phase_completed => {
+            bail!("initial phase already completed; use --phase pre-record to add known transfers")
+        }
+        TransferPhase::PreRecord if state.pre_record_phase_completed => {
+            bail!("pre-record phase already completed; stop before choosing the record slot")
+        }
+        _ => {}
     }
     let rpc_url =
         rpc_url_override
@@ -241,7 +274,7 @@ fn transfers(
             } else {
                 &state.rpc_url
             });
-    let rpc = RpcClient::new(rpc_url.to_string());
+    let rpc = RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::processed());
     let payer = load_keypair(payer_path)?;
     let mint = Pubkey::from_str(&state.mint)?;
     let mint_authority = payer.pubkey();
@@ -256,6 +289,16 @@ fn transfers(
             ))
         })
         .collect::<Result<_>>()?;
+
+    let initial_balances = [845, 771, 546, 18, 20];
+    let pre_record_balances = [828, 777, 549, 26, 20];
+    if matches!(phase, TransferPhase::PreRecord) {
+        let balances = read_balances(&rpc, &holders)?;
+        ensure!(
+            balances == initial_balances,
+            "pre-record requires the untouched initial balances; got {balances:?}"
+        );
+    }
 
     if matches!(phase, TransferPhase::Initial) {
         let initial = [(0usize, 1_000u64), (1usize, 700u64), (2usize, 500u64)];
@@ -313,15 +356,26 @@ fn transfers(
     if matches!(phase, TransferPhase::Initial) {
         let frozen = &state.holders[4];
         let _ = run_external(
-            "token-acl",
-            &["freeze", &state.mint, &frozen.token_account],
+            TOKEN_ACL_CLI,
+            &["freeze", &frozen.token_account],
             rpc_url,
             payer_path,
         )?;
-        state.initial_phase_completed = true;
-        fs::write(state_path, serde_json::to_vec_pretty(&state)?)?;
+    }
+    let expected_balances = match phase {
+        TransferPhase::Initial => initial_balances,
+        TransferPhase::PreRecord => pre_record_balances,
+    };
+    assert_balances(&rpc, &holders, &expected_balances)?;
+    if matches!(phase, TransferPhase::Initial) {
+        assert_account_state(&rpc, &holders[4].2, AccountState::Frozen)?;
     }
     let last_slot = rpc.get_slot()?;
+    match phase {
+        TransferPhase::Initial => state.initial_phase_completed = true,
+        TransferPhase::PreRecord => state.pre_record_phase_completed = true,
+    }
+    fs::write(state_path, serde_json::to_vec_pretty(&state)?)?;
     println!("mint: {}", state.mint);
     println!("phase: {:?}", phase);
     if matches!(phase, TransferPhase::Initial) {
@@ -338,28 +392,43 @@ fn transfers(
 
 fn create_mint(rpc: &RpcClient, payer: &Keypair, mint: &Keypair) -> Result<Pubkey> {
     let token_program = token_program();
-    let rent = rpc.get_minimum_balance_for_rent_exemption(MINT_SPACE)?;
     let metadata_name = "Slotbook Demo Asset".to_string();
     let metadata_symbol = "SLOT".to_string();
     let metadata_uri = "".to_string();
+    let metadata_for_sizing = TokenMetadata {
+        mint: mint.pubkey(),
+        name: metadata_name.clone(),
+        symbol: metadata_symbol.clone(),
+        uri: metadata_uri.clone(),
+        additional_metadata: vec![("token_acl".to_string(), TOKEN_ACL_GATE.to_string())],
+        ..TokenMetadata::default()
+    };
+    let mint_space = ExtensionType::try_calculate_account_len::<Mint>(&[
+        ExtensionType::DefaultAccountState,
+        ExtensionType::MetadataPointer,
+    ])?;
+    let rent_space = mint_space
+        .checked_add(metadata_for_sizing.tlv_size_of()?)
+        .context("Token-2022 mint rent size overflow")?;
+    let rent = rpc.get_minimum_balance_for_rent_exemption(rent_space)?;
     let instructions = vec![
         create_account(
             &payer.pubkey(),
             &mint.pubkey(),
             rent,
-            MINT_SPACE as u64,
+            mint_space as u64,
             &token_program,
         ),
+        default_state::initialize_default_account_state(
+            &token_program,
+            &mint.pubkey(),
+            &AccountState::Frozen,
+        )?,
         metadata_pointer::initialize(
             &token_program,
             &mint.pubkey(),
             Some(payer.pubkey()),
             Some(mint.pubkey()),
-        )?,
-        default_state::initialize_default_account_state(
-            &token_program,
-            &mint.pubkey(),
-            &AccountState::Frozen,
         )?,
         token_instruction::initialize_mint2(
             &token_program,
@@ -392,6 +461,121 @@ fn create_mint(rpc: &RpcClient, payer: &Keypair, mint: &Keypair) -> Result<Pubke
         &[payer as &dyn Signer, mint as &dyn Signer],
     )?;
     Ok(mint.pubkey())
+}
+
+fn assert_mint_and_holders(
+    rpc: &RpcClient,
+    mint: &Pubkey,
+    payer: &Pubkey,
+    decimals: u8,
+    holders: &[(Pubkey, Pubkey)],
+) -> Result<()> {
+    let mint_account = rpc.get_account(mint)?;
+    ensure!(
+        mint_account.owner == token_program(),
+        "mint is not Token-2022 owned"
+    );
+    let mint_state = StateWithExtensions::<Mint>::unpack(&mint_account.data)
+        .map_err(|error| anyhow::anyhow!("could not unpack mint state: {error}"))?;
+    ensure!(mint_state.base.is_initialized, "mint is not initialized");
+    ensure!(
+        mint_state.base.decimals == decimals,
+        "mint decimals do not match"
+    );
+    ensure!(
+        mint_state.base.mint_authority == COption::Some(*payer),
+        "issuer payer is not the mint authority"
+    );
+    ensure!(
+        mint_state.base.freeze_authority.is_some(),
+        "mint freeze authority is missing"
+    );
+    let mint_extensions = mint_state.get_extension_types()?;
+    ensure!(
+        mint_extensions.contains(&ExtensionType::DefaultAccountState),
+        "mint is missing DefaultAccountState"
+    );
+    let default_account_state = mint_state.get_extension::<DefaultAccountState>()?;
+    ensure!(
+        default_account_state.state == AccountState::Frozen as u8,
+        "mint default account state is not Frozen"
+    );
+    ensure!(
+        mint_extensions.contains(&ExtensionType::MetadataPointer),
+        "mint is missing MetadataPointer"
+    );
+
+    for (owner, token_account) in holders {
+        let account = rpc.get_account(token_account)?;
+        ensure!(
+            account.owner == token_program(),
+            "holder token account is not Token-2022 owned"
+        );
+        let token_state = StateWithExtensions::<TokenAccount>::unpack(&account.data)
+            .map_err(|error| anyhow::anyhow!("could not unpack holder account: {error}"))?;
+        ensure!(
+            token_state.base.mint == *mint,
+            "holder account has the wrong mint"
+        );
+        ensure!(
+            token_state.base.owner == *owner,
+            "holder account has the wrong owner"
+        );
+        ensure!(
+            token_state
+                .get_extension_types()?
+                .contains(&ExtensionType::ImmutableOwner),
+            "holder account is missing ImmutableOwner"
+        );
+    }
+    Ok(())
+}
+
+fn assert_balances(
+    rpc: &RpcClient,
+    holders: &[(Keypair, Pubkey, Pubkey)],
+    expected: &[u64; 5],
+) -> Result<()> {
+    let actual = read_balances(rpc, holders)?;
+    for (index, (actual, expected)) in actual.iter().zip(expected).enumerate() {
+        ensure!(
+            actual == expected,
+            "holder-{index} balance mismatch: expected {}, got {actual}",
+            expected
+        );
+    }
+    Ok(())
+}
+
+fn read_balances(rpc: &RpcClient, holders: &[(Keypair, Pubkey, Pubkey)]) -> Result<[u64; 5]> {
+    ensure!(
+        holders.len() == 5,
+        "the deterministic history requires exactly five holders"
+    );
+    let mut balances = [0; 5];
+    for (index, (_, _, token_account)) in holders.iter().enumerate() {
+        let amount = rpc.get_token_account_balance(token_account)?.amount;
+        balances[index] = amount
+            .parse::<u64>()
+            .with_context(|| format!("invalid balance for holder-{index}: {amount}"))?;
+    }
+    Ok(balances)
+}
+
+fn assert_account_state(
+    rpc: &RpcClient,
+    token_account: &Pubkey,
+    expected: AccountState,
+) -> Result<()> {
+    let account = rpc.get_account(token_account)?;
+    let token_state = StateWithExtensions::<TokenAccount>::unpack(&account.data)
+        .map_err(|error| anyhow::anyhow!("could not unpack token account: {error}"))?;
+    ensure!(
+        token_state.base.state == expected,
+        "token account state mismatch: expected {expected:?}, got {:?}",
+        token_state.base.state
+    );
+    Ok(())
 }
 
 fn send(rpc: &RpcClient, instructions: &[Instruction], signers: &[&dyn Signer]) -> Result<()> {
