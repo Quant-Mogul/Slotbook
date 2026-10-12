@@ -33,7 +33,6 @@ that every check ran and passed.
 
     cargo test -p demo --test devnet -- --ignored --test-threads=1
 
-<!-- TODO before submitting: screenshot of the devnet run. -->
 ![Devnet tests passing](docs/images/devnet-tests.png)
 
 The run's transaction log, with an explorer link for every transaction, is written to
