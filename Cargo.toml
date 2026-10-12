@@ -1,5 +1,5 @@
 [workspace]
-members = [ "crates/attestor", "crates/merkle", "crates/snapshot",
+members = [ "crates/attestor", "crates/demo", "crates/merkle", "crates/snapshot",
     "programs/*", "scripts/issuer"
 ]
 resolver = "2"

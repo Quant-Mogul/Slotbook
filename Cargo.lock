@@ -1543,6 +1543,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
 
 [[package]]
+name = "demo"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "anyhow",
+ "clap",
+ "merkle",
+ "serde_json",
+ "slotbook",
+ "solana-client",
+ "solana-commitment-config",
+ "solana-keypair",
+ "solana-signer",
+ "solana-transaction",
+]
+
+[[package]]
 name = "der"
 version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
