@@ -35,7 +35,8 @@ that every check ran and passed.
 
 ![Devnet tests passing](docs/images/devnet-tests.png)
 
-The run's transaction log, with an explorer link for every transaction, is written to
+The transaction log of this run, with an explorer link for every transaction and every
+check's result, is in [docs/DEVNET_RUN.md](docs/DEVNET_RUN.md). A new run writes its log to
 `target/devnet-test/DEMO_RUN.md`. Details: [crates/demo/README.md](crates/demo/README.md).
 
 ### Local (LiteSVM, runs in CI)
@@ -181,7 +182,7 @@ of siblings, bottom-up, at most 32. `claim` verifies it on-chain.
 | `crates/demo` | `slotbook-demo`: the whole lifecycle on a live cluster, with an explorer link for every transaction |
 | `scripts/issuer` | Issuer setup: Token-2022 mint under Token ACL and the ABL gate |
 | `scripts/reproduce_root.py` | Recomputes a root from a register with the independent Python spec code |
-| `docs/` | [Snapshot spec](docs/SNAPSHOT_SPEC.md), [test vectors](docs/vectors), [issuer runbook](docs/ISSUER_RUNBOOK.md), [demo guide](docs/DEMO.md) |
+| `docs/` | [Snapshot spec](docs/SNAPSHOT_SPEC.md), [threat model](docs/THREAT_MODEL.md), [devnet run log](docs/DEVNET_RUN.md), [test vectors](docs/vectors), [issuer runbook](docs/ISSUER_RUNBOOK.md), [demo guide](docs/DEMO.md) |
 
 ## Running the demo
 
@@ -202,6 +203,9 @@ link for every transaction. For a local validator run, see [crates/demo/README.m
 - The demo pays and bonds in test USDC mints it creates, not Circle's devnet USDC.
 - The demo thaws with Token ACL's authority thaw; in production the ABL gate's permissionless thaw does it.
 - In the demo one operator runs both attestors and the resolver.
+
+What the program defends against, what it trusts, and which test covers each defence:
+[docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
 ## Team
 
