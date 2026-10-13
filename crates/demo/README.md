@@ -2,7 +2,7 @@
 
 Runs the Slotbook demo, steps 1 to 8, against a live cluster, checks every step, and
 writes every transaction link and check to `<out>/DEMO_RUN.md` and every address to
-`<out>/addresses.json`. Step 9 (Superbank design issue, issuer write-ups) is not on-chain.
+`<out>/addresses.json`. Step 9, the Superbank proposal, is not on-chain: [solana-rpc/superbank#110](https://github.com/solana-rpc/superbank/issues/110).
 
 It records 32 checks of two kinds:
 
