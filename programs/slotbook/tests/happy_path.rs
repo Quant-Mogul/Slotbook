@@ -150,7 +150,8 @@ fn happy_path() {
     for (balance, state) in [(600, AccountState::Initialized), (400, AccountState::Frozen)] {
         let kp = Keypair::new();
         svm.airdrop(&kp.pubkey(), 1_000_000_000).unwrap();
-        let mint_account = Pubkey::new_unique();
+        // The holder's ATA: claim and release_pending only accept that account.
+        let mint_account = get_associated_token_address_with_program_id(&kp.pubkey(), &mint, &anchor_spl::token_2022::ID);
         set_t22(&mut svm, mint_account, holder_account(mint, kp.pubkey(), balance, state));
         let payment_account = CreateAccount::new(&mut svm, &issuer, &pay_mint).owner(&kp.pubkey()).send().unwrap();
         holders.push(Holder { kp, balance, mint_account, payment_account });

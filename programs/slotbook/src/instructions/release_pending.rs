@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::get_associated_token_address_with_program_id;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
@@ -59,9 +60,17 @@ pub struct ReleasePending<'info> {
     )]
     pub holder_payment_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
+    /// The holder's associated token account (see Claim), so a thawed side account cannot
+    /// release a payout held for a frozen holder.
     #[account(
         constraint = holder_mint_account.mint == issuer_config.mint @ SlotbookError::WrongMint,
-        constraint = holder_mint_account.owner == pending.owner @ SlotbookError::NotLeafOwner
+        constraint = holder_mint_account.owner == pending.owner @ SlotbookError::NotLeafOwner,
+        constraint = holder_mint_account.key()
+            == get_associated_token_address_with_program_id(
+                &pending.owner,
+                &issuer_config.mint,
+                &anchor_spl::token_2022::ID,
+            ) @ SlotbookError::NotHolderAta
     )]
     pub holder_mint_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
