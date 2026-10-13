@@ -1131,6 +1131,6 @@ fn demo(run: &mut Run, args: &Args) -> Result<()> {
     );
     let passed = run.checks.iter().filter(|c| c.ok).count();
     run.note(format!("\n{passed} of {} checks passed.", run.checks.len()));
-    run.note("\n## Step 9 (not on-chain)\n\nSuperbank design issue with SQL, and two issuer write-ups.".to_string());
+    run.note("\n## Step 9 (not on-chain)\n\nSuperbank design proposal: https://github.com/solana-rpc/superbank/issues/110 (docs/SUPERBANK_PROPOSAL.md).".to_string());
     Ok(())
 }

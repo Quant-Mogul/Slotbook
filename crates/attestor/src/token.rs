@@ -132,9 +132,10 @@ pub fn decode_token_ix(
             if accounts.len() < 2 || data.len() < 9 {
                 return None;
             }
+            // MintTo / MintToChecked accounts: [mint, destination, authority].
             Some(TokenOp::MintTo {
-                account: accounts[0],
-                mint: accounts[1],
+                account: accounts[1],
+                mint: accounts[0],
                 amount: u64::from_le_bytes(data[1..9].try_into().ok()?),
             })
         }
@@ -206,16 +207,14 @@ pub fn decode_token_ix(
     }
 }
 
+/// An optional pubkey in token *instruction* data: a 1-byte tag (1 = Some) and 32 bytes.
+/// (Account state uses a 4-byte COption tag; instruction data does not.)
 fn parse_coption_pubkey(data: &[u8]) -> Option<AddressBytes> {
-    if data.len() < 36 {
-        return None;
-    }
-    let tag = u32::from_le_bytes(data[0..4].try_into().ok()?);
-    if tag != 1 {
+    if data.len() < 33 || data[0] != 1 {
         return None;
     }
     let mut pk = [0u8; 32];
-    pk.copy_from_slice(&data[4..36]);
+    pk.copy_from_slice(&data[1..33]);
     Some(pk)
 }
 
@@ -270,5 +269,35 @@ mod tests {
         data.extend_from_slice(&1u16.to_le_bytes());
         data.push(2);
         assert_eq!(mint_default_account_state(&data), Some(AccountState::Frozen));
+    }
+
+    /// spl-token MintTo / MintToChecked accounts are [mint, destination, authority].
+    #[test]
+    fn mint_to_reads_mint_then_destination() {
+        let (mint, dest, auth) = ([2u8; 32], [3u8; 32], [4u8; 32]);
+        for tag in [7u8, 14] {
+            let mut data = vec![tag];
+            data.extend(100u64.to_le_bytes());
+            data.push(0);
+            let op = decode_token_ix(&token_2022_program(), &[mint, dest, auth], &data);
+            assert!(matches!(op, Some(TokenOp::MintTo { account, mint: m, amount: 100 })
+                if account == dest && m == mint));
+        }
+    }
+
+    /// SetAuthority data: [6, authority_type, option tag (1 byte), new authority (32 bytes)].
+    #[test]
+    fn set_authority_account_owner_decodes() {
+        let (account, current, new_owner) = ([3u8; 32], [4u8; 32], [9u8; 32]);
+        let mut data = vec![6u8, 2, 1];
+        data.extend(new_owner);
+        let op = decode_token_ix(&token_program(), &[account, current], &data);
+        assert!(matches!(op, Some(TokenOp::SetOwner { account: a, new_owner: o })
+            if a == account && o == new_owner));
+        // Other authority types and a None authority are not owner changes.
+        assert!(decode_token_ix(&token_program(), &[account, current], &[6u8, 2, 0]).is_none());
+        let mut close = vec![6u8, 3, 1];
+        close.extend(new_owner);
+        assert!(decode_token_ix(&token_program(), &[account, current], &close).is_none());
     }
 }
