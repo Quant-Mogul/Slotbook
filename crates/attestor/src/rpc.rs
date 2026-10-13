@@ -295,16 +295,7 @@ pub fn parse_rpc_tx(val: &Value) -> Result<(RawTx, Option<u32>), AttestorError> 
         .get("message")
         .ok_or_else(|| AttestorError::Rpc("missing message".into()))?;
     let keys = parse_account_keys(message)?;
-    let mut instructions = parse_compiled_ixs(message.get("instructions"), &keys)?;
-    if let Some(inner) = meta
-        .and_then(|m| m.get("innerInstructions"))
-        .and_then(|v| v.as_array())
-    {
-        for group in inner {
-            let inner_ixs = group.get("instructions");
-            instructions.extend(parse_compiled_ixs(inner_ixs, &keys)?);
-        }
-    }
+    let instructions = execution_order(message.get("instructions"), meta, &keys)?;
     let pre = parse_balances(meta.and_then(|m| m.get("preTokenBalances")), &keys)?;
     let post = parse_balances(meta.and_then(|m| m.get("postTokenBalances")), &keys)?;
     Ok((
@@ -319,6 +310,48 @@ pub fn parse_rpc_tx(val: &Value) -> Result<(RawTx, Option<u32>), AttestorError> 
         },
         index,
     ))
+}
+
+/// Outer instructions in order, each followed by its inner instructions (the group whose
+/// `index` is that outer instruction's position), which is the order they executed in.
+fn execution_order(
+    outer: Option<&Value>,
+    meta: Option<&Value>,
+    keys: &[AddressBytes],
+) -> Result<Vec<RawInstruction>, AttestorError> {
+    let outer: &[Value] = outer.and_then(|v| v.as_array()).map(|a| a.as_slice()).unwrap_or(&[]);
+    let mut inner: BTreeMap<usize, Vec<RawInstruction>> = BTreeMap::new();
+    if let Some(groups) = meta
+        .and_then(|m| m.get("innerInstructions"))
+        .and_then(|v| v.as_array())
+    {
+        for group in groups {
+            let index = group
+                .get("index")
+                .and_then(|v| v.as_u64())
+                .ok_or_else(|| AttestorError::Rpc("inner instruction group missing index".into()))?
+                as usize;
+            if index >= outer.len() {
+                return Err(AttestorError::Rpc(format!(
+                    "inner instruction group index {index} out of range"
+                )));
+            }
+            inner
+                .entry(index)
+                .or_default()
+                .extend(parse_compiled_ixs(group.get("instructions"), keys)?);
+        }
+    }
+    let mut out = Vec::new();
+    for (i, ix) in outer.iter().enumerate() {
+        // Parse one at a time: parse_compiled_ixs may drop an instruction, so output
+        // positions are not outer indexes.
+        out.extend(parse_compiled_ixs(Some(&Value::Array(vec![ix.clone()])), keys)?);
+        if let Some(group) = inner.remove(&i) {
+            out.extend(group);
+        }
+    }
+    Ok(out)
 }
 
 fn parse_account_keys(message: &Value) -> Result<Vec<AddressBytes>, AttestorError> {
@@ -767,5 +800,74 @@ mod tests {
         let (slot, sig) = parse_signature_row(&json!({"slot": 3, "signature": "abc"})).unwrap();
         assert_eq!(slot, 3);
         assert_eq!(sig, "abc");
+    }
+
+    /// A new holder usually receives tokens in one transaction: the ATA program creates and
+    /// initializes the account (inner instruction of outer #0), then TransferChecked (outer #1)
+    /// moves tokens in. Replay must see the inner InitializeAccount before the transfer.
+    #[test]
+    fn inner_instructions_replay_in_execution_order() {
+        use crate::replay::{replay, ReplayOpts};
+        let k = |b: u8| snapshot::encode_address(&[b; 32]);
+        let (payer, mint, acc_a, acc_b, owner_a, owner_b) = (k(1), k(2), k(3), k(4), k(5), k(6));
+        let token = crate::token::TOKEN_2022_PROGRAM.to_string();
+        let ata = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL".to_string();
+        let data = |bytes: Vec<u8>| bs58::encode(bytes).into_string();
+        let init_account3 = |owner: u8| {
+            let mut d = vec![18u8];
+            d.extend([owner; 32]);
+            data(d)
+        };
+        let mut transfer_checked = vec![12u8];
+        transfer_checked.extend(40u64.to_le_bytes());
+        transfer_checked.push(0);
+        let mut mint_to = vec![7u8];
+        mint_to.extend(100u64.to_le_bytes());
+        let mut mint_ix = vec![20u8, 0];
+        mint_ix.extend([1u8; 32]);
+        mint_ix.push(0);
+
+        // keys: 0 payer, 1 mint, 2 acc_a, 3 acc_b, 4 owner_a, 5 owner_b, 6 token, 7 ata
+        let keys = json!([payer, mint, acc_a, acc_b, owner_a, owner_b, token, ata]);
+        let setup = json!({
+            "slot": 1, "transactionIndex": 0,
+            "transaction": { "signatures": ["s1"], "message": { "accountKeys": keys, "instructions": [
+                { "programIdIndex": 6, "accounts": [1], "data": data(mint_ix) },
+                { "programIdIndex": 6, "accounts": [2, 1], "data": init_account3(5) },
+                { "programIdIndex": 6, "accounts": [1, 2, 0], "data": data(mint_to) }
+            ]}},
+            "meta": { "err": null, "preTokenBalances": [], "postTokenBalances": [] }
+        });
+        let receive = json!({
+            "slot": 2, "transactionIndex": 0,
+            "transaction": { "signatures": ["s2"], "message": { "accountKeys": keys, "instructions": [
+                { "programIdIndex": 7, "accounts": [0, 3, 5, 1, 6], "data": "" },
+                { "programIdIndex": 6, "accounts": [2, 1, 3, 4], "data": data(transfer_checked) }
+            ]}},
+            "meta": { "err": null, "preTokenBalances": [], "postTokenBalances": [],
+                "innerInstructions": [{ "index": 0, "instructions": [
+                    { "programIdIndex": 6, "accounts": [3, 1], "data": init_account3(6) }
+                ]}]
+            }
+        });
+        let txs = vec![parse_rpc_tx(&setup).unwrap().0, parse_rpc_tx(&receive).unwrap().0];
+        let opts = ReplayOpts { mint: [2u8; 32], record_slot: 2, require_frozen_default: false };
+        let register = replay(&opts, &txs).expect("replay must not fail on ATA create + transfer");
+        assert_eq!(register.balance_of(&[5u8; 32]), Some(60));
+        assert_eq!(register.balance_of(&[6u8; 32]), Some(40));
+    }
+
+    #[test]
+    fn inner_instruction_group_with_unknown_index_is_error() {
+        let (k0, k1, k2) = sample_keys();
+        let val = json!({
+            "slot": 1,
+            "transaction": { "signatures": ["s"], "message": { "accountKeys": [k0, k1, k2], "instructions": [
+                { "programIdIndex": 0, "accounts": [1], "data": "" }
+            ]}},
+            "meta": { "err": null, "preTokenBalances": [], "postTokenBalances": [],
+                "innerInstructions": [{ "index": 3, "instructions": [] }] }
+        });
+        assert!(parse_rpc_tx(&val).is_err());
     }
 }

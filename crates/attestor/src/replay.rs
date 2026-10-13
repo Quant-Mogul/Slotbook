@@ -305,7 +305,8 @@ mod tests {
     fn mint_to(slot: u64, account: AddressBytes, mint: AddressBytes, amount: u64) -> RawTx {
         let mut data = vec![7u8];
         data.extend_from_slice(&amount.to_le_bytes());
-        tx(slot, 0, vec![ix(data, vec![account, mint, pk(99)])])
+        // spl-token MintTo accounts: [mint, destination, authority]
+        tx(slot, 0, vec![ix(data, vec![mint, account, pk(99)])])
     }
 
     fn transfer_checked(

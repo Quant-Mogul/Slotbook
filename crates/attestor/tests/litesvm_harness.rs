@@ -53,7 +53,8 @@ fn init_account_ix(
 fn mint_to_ix(account: AddressBytes, mint: AddressBytes, amount: u64) -> RawInstruction {
     let mut data = vec![7u8];
     data.extend_from_slice(&amount.to_le_bytes());
-    token_ix(data, vec![account, mint, [0u8; 32]])
+    // spl-token MintTo accounts: [mint, destination, authority]
+    token_ix(data, vec![mint, account, [0u8; 32]])
 }
 
 fn transfer_checked_ix(
