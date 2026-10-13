@@ -67,7 +67,10 @@ pub fn handle_close_distribution(ctx: Context<CloseDistribution>) -> Result<()> 
                 .record_slot
                 .checked_add(cfg.claim_expiry_slots)
                 .ok_or(SlotbookError::MathOverflow)?;
-            d.commitment_count == 0 || slot >= expiry
+            // Cancelling is only possible before the record slot. After it, holders are owed
+            // the payout, so the issuer cannot pull the vault back, including after an Upheld
+            // or Expired ruling resets the commitments; only claim expiry frees it.
+            (d.commitment_count == 0 && slot < d.record_slot) || slot >= expiry
         }
         _ => false,
     };

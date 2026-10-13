@@ -209,7 +209,8 @@ impl Env {
         for (balance, state) in holders {
             let kp = Keypair::new();
             env.svm.airdrop(&kp.pubkey(), 1_000_000_000).unwrap();
-            let mint_account = Pubkey::new_unique();
+            // The holder's ATA: claim and release_pending only accept that account.
+            let mint_account = get_associated_token_address_with_program_id(&kp.pubkey(), &mint, &t22::ID);
             env.set_t22(mint_account, holder_data(mint, kp.pubkey(), *balance, *state));
             let payment_account = env.token_account(pay_mint, kp.pubkey());
             env.holders.push(Holder { kp, balance: *balance, mint_account, payment_account });
@@ -528,6 +529,12 @@ impl Env {
     }
 
     pub fn claim(&mut self, i: usize, rows: &[(Pubkey, u64)]) -> Result<(), String> {
+        let mint_account = self.holders[i].mint_account;
+        self.claim_reading(i, rows, mint_account)
+    }
+
+    /// claim with the freeze state read from `mint_account` (to test the ATA rule).
+    pub fn claim_reading(&mut self, i: usize, rows: &[(Pubkey, u64)], mint_account: Pubkey) -> Result<(), String> {
         let h = &self.holders[i];
         let o = h.kp.pubkey();
         let idx = rows.iter().position(|(r, _)| *r == o).expect("holder not in rows");
@@ -543,7 +550,7 @@ impl Env {
                 payment_mint: self.pay_mint,
                 vault: self.vault,
                 holder_payment_account: h.payment_account,
-                holder_mint_account: h.mint_account,
+                holder_mint_account: mint_account,
                 payment_token_program: token::ID,
                 system_program: system_program::ID,
             },
@@ -553,6 +560,12 @@ impl Env {
     }
 
     pub fn release_pending(&mut self, i: usize) -> Result<(), String> {
+        let mint_account = self.holders[i].mint_account;
+        self.release_pending_reading(i, mint_account)
+    }
+
+    /// release_pending with the freeze state read from `mint_account` (to test the ATA rule).
+    pub fn release_pending_reading(&mut self, i: usize, mint_account: Pubkey) -> Result<(), String> {
         let h = &self.holders[i];
         let ixn = ix(
             slotbook::accounts::ReleasePending {
@@ -563,7 +576,7 @@ impl Env {
                 payment_mint: self.pay_mint,
                 vault: self.vault,
                 holder_payment_account: h.payment_account,
-                holder_mint_account: h.mint_account,
+                holder_mint_account: mint_account,
                 payment_token_program: token::ID,
             },
             slotbook::instruction::ReleasePending {},

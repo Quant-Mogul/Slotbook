@@ -109,6 +109,7 @@ devnet_tests!(
     rejected_challenge_pays_resolver_and_attestors,
     // step 5: upheld challenge
     upheld_challenge_slashes_attestors,
+    no_cancel_after_record_slot,
     corrected_root_committed_and_reproduced,
     // step 6: finalize and claim
     challenge_after_window,
@@ -119,6 +120,7 @@ devnet_tests!(
     double_claim,
     withdraw_bond_with_live_commitment,
     // step 7: frozen holder, Pending, release
+    frozen_holder_cannot_claim_through_side_account,
     frozen_holder_goes_to_pending,
     pending_released_after_thaw,
     // step 8: sweep, close, attestors exit

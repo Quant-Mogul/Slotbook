@@ -4,13 +4,13 @@ Runs the Slotbook demo, steps 1 to 8, against a live cluster, checks every step,
 writes every transaction link and check to `<out>/DEMO_RUN.md` and every address to
 `<out>/addresses.json`. Step 9, the Superbank proposal, is not on-chain: [solana-rpc/superbank#110](https://github.com/solana-rpc/superbank/issues/110).
 
-It records 32 checks of two kinds:
+It records 34 checks of two kinds:
 
 - **state checks** read accounts and token balances after a step: distribution state,
   roots, exact payouts, bond and fee movements, Pending amounts, closed accounts;
 - **refusal checks** simulate a transaction the program must refuse (double claim,
   bad proof, challenge after the window, resolve by a non-resolver, early finalize,
-  sweep or close, ...) and pass only on the expected program error.
+  sweep or close, cancelling after the record slot, claiming through a side account, ...) and pass only on the expected program error.
 
 ## Devnet tests
 

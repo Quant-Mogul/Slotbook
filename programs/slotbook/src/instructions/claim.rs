@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::get_associated_token_address_with_program_id;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
@@ -67,10 +68,18 @@ pub struct Claim<'info> {
     )]
     pub holder_payment_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    /// Any account of the permissioned mint owned by the holder; read for freeze state.
+    /// The holder's associated token account of the permissioned mint; read for freeze state.
+    /// It must be the ATA: with any account of theirs, a holder with one frozen and one
+    /// thawed account could pass the thawed one and skip Pending.
     #[account(
         constraint = holder_mint_account.mint == issuer_config.mint @ SlotbookError::WrongMint,
-        constraint = holder_mint_account.owner == holder.key() @ SlotbookError::NotLeafOwner
+        constraint = holder_mint_account.owner == holder.key() @ SlotbookError::NotLeafOwner,
+        constraint = holder_mint_account.key()
+            == get_associated_token_address_with_program_id(
+                &holder.key(),
+                &issuer_config.mint,
+                &anchor_spl::token_2022::ID,
+            ) @ SlotbookError::NotHolderAta
     )]
     pub holder_mint_account: Box<InterfaceAccount<'info, TokenAccount>>,
 

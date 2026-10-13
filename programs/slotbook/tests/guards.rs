@@ -171,3 +171,47 @@ fn close_declared_then_update_issuer() {
     env.send_by_issuer(&[update(&env)]).unwrap();
     assert_eq!(env.read::<IssuerConfig>(&env.issuer_config).quorum, 1);
 }
+
+/// D7: cancelling (closing a Declared distribution with no commitment) is only possible
+/// before the record slot. After it the payout is owed: the issuer waits for claim expiry.
+#[test]
+fn declared_close_after_record_slot_waits_for_expiry() {
+    let mut env = Env::new(&[(1_000, HolderState::Initialized)]);
+    env.warp(RECORD_SLOT);
+    expect_err(env.close_distribution(), "CannotClose");
+    env.warp(RECORD_SLOT + EXPIRY);
+    env.close_distribution().unwrap();
+}
+
+/// After an Upheld ruling the commitments are gone and the distribution is Declared again;
+/// the issuer still cannot take the vault back before claim expiry.
+#[test]
+fn upheld_ruling_does_not_reopen_cancellation() {
+    let (mut env, _) = committed(&[(600, HolderState::Initialized), (400, HolderState::Initialized)]);
+    let (c, c_bond) = new_challenger(&mut env);
+    let omitted = env.holders[1].kp.pubkey();
+    env.challenge(&c, c_bond, 0, omitted, 1).unwrap();
+    let resolver = env.resolver.insecure_clone();
+    env.resolve(&resolver, Ruling::Upheld, Some((0, c.pubkey(), c_bond)), &[0, 1]).unwrap();
+    let d = env.read::<Distribution>(&env.distribution);
+    assert_eq!((d.state, d.commitment_count), (DistributionState::Declared, 0));
+    expect_err(env.close_distribution(), "CannotClose");
+}
+
+/// A thawed side account of a frozen holder: claim and release_pending must read the
+/// holder's ATA, so the payout is still held in Pending.
+#[test]
+fn freeze_state_comes_from_the_holders_ata() {
+    let (mut env, rows) = committed(&[(1_000, HolderState::Frozen)]);
+    let owner = env.holders[0].kp.pubkey();
+    let side = Pubkey::new_unique();
+    let mint = env.mint;
+    env.set_t22(side, holder_data(mint, owner, 0, HolderState::Initialized));
+    let end = env.read::<Distribution>(&env.distribution).window_end_slot;
+    env.warp(end);
+    env.finalize().unwrap();
+    expect_err(env.claim_reading(0, &rows, side), "NotHolderAta");
+    env.claim(0, &rows).unwrap();
+    assert_eq!(env.read::<Pending>(&env.pending(0)).amount, TOTAL);
+    expect_err(env.release_pending_reading(0, side), "NotHolderAta");
+}

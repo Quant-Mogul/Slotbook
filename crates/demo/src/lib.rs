@@ -42,7 +42,7 @@ use anchor_spl::{
         self,
         spl_token_2022::{
             extension::{default_account_state, ExtensionType},
-            state::{AccountState, Mint as T22Mint},
+            state::{Account as T22Account, AccountState, Mint as T22Mint},
         },
     },
 };
@@ -845,6 +845,20 @@ fn demo(run: &mut Run, args: &Args) -> Result<()> {
             usdc(bonds[0])
         ),
     );
+    let close_ix = slotbook_ix(
+        slotbook::accounts::CloseDistribution {
+            authority: ip,
+            issuer_config,
+            distribution,
+            payment_mint: pay_mint,
+            vault,
+            issuer_payment_account: issuer_pay,
+            payment_token_program: token::ID,
+        },
+        slotbook::instruction::CloseDistribution {},
+    );
+    // Declared with no commitment again, but after the record slot: the payout is owed.
+    run.expect_refused("no_cancel_after_record_slot", &[close_ix.clone()], &[&issuer], &code("CannotClose"))?;
     for a in &attestors {
         let kp = a.kp.insecure_clone();
         run.send(
@@ -956,6 +970,31 @@ fn demo(run: &mut Run, args: &Args) -> Result<()> {
         ],
         &[&issuer],
     )?;
+    // B also has a thawed side account (not the ATA). Claiming through it must not skip Pending.
+    let side = Keypair::new();
+    let side_len = ExtensionType::try_calculate_account_len::<T22Account>(&[ExtensionType::ImmutableOwner])?;
+    let side_rent = run.rpc.get_minimum_balance_for_rent_exemption(side_len)?;
+    run.send(
+        "B's side account (Token-2022, ImmutableOwner, not the ATA), thawed",
+        &[
+            system_instruction::create_account(&ip, &side.pubkey(), side_rent, side_len as u64, &token_2022::ID),
+            token_2022::spl_token_2022::instruction::initialize_immutable_owner(&token_2022::ID, &side.pubkey())?,
+            token_2022::spl_token_2022::instruction::initialize_account3(
+                &token_2022::ID,
+                &side.pubkey(),
+                &mint,
+                &holders[1].kp.pubkey(),
+            )?,
+            acl_set_frozen(false, &ip, &mint, &side.pubkey(), &mint_config),
+        ],
+        &[&issuer, &side],
+    )?;
+    run.expect_refused(
+        "frozen_holder_cannot_claim_through_side_account",
+        &[claim_ix(holders[1].kp.pubkey(), holders[1].pay_ata, side.pubkey(), leaf_of(1), balances[1])],
+        &[&b_kp],
+        &code("NotHolderAta"),
+    )?;
     run.send(&format!("claim by {}", holders[1].name), &[holder_claim_ix(1)], &[&b_kp])?;
     let pending_of = |i: usize| pda(&[b"pending", distribution.as_ref(), holders[i].kp.pubkey().as_ref()]);
     let p: Pending = run.read(&pending_of(1))?;
@@ -1026,18 +1065,6 @@ fn demo(run: &mut Run, args: &Args) -> Result<()> {
         "unclaimed_pending_swept_to_issuer",
         issuer_back == 200 * ONE && d.swept_total == 200 * ONE && d.pending_total == 0,
         format!("C stayed frozen; {} swept back to the issuer", usdc(issuer_back)),
-    );
-    let close_ix = slotbook_ix(
-        slotbook::accounts::CloseDistribution {
-            authority: ip,
-            issuer_config,
-            distribution,
-            payment_mint: pay_mint,
-            vault,
-            issuer_payment_account: issuer_pay,
-            payment_token_program: token::ID,
-        },
-        slotbook::instruction::CloseDistribution {},
     );
     run.expect_refused("close_before_claim_expiry", &[close_ix.clone()], &[&issuer], &code("CannotClose"))?;
     run.wait_for_slot(d.open_slot + args.claim_expiry_slots, "claim expiry")?;

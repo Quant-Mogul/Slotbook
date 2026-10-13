@@ -95,4 +95,8 @@ pub enum SlotbookError {
     MathOverflow,
     #[msg("claimed + pending + swept would exceed total")]
     InvariantViolated,
+
+    // Appended so earlier error codes do not change.
+    #[msg("Holder's mint account must be their associated token account")]
+    NotHolderAta,
 }

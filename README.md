@@ -24,11 +24,12 @@ the token on the **record date**. On Solana that is a **record slot**. Slotbook 
 
 ### On devnet
 
-33 tests run the whole lifecycle once against the deployed program on devnet, then check
+35 tests run the whole lifecycle once against the deployed program on devnet, then check
 every step: 17 state checks (distribution state, roots, exact payouts, bond and fee
-movements, Pending amounts, closed accounts) and 15 refusals the program must make with
+movements, Pending amounts, closed accounts) and 17 refusals the program must make with
 the expected error (double claim, bad or borrowed proof, early commit, finalize, sweep or
-close, challenge after the window, resolve by a non-resolver, and more), plus one test
+close, cancelling after the record slot, claiming through a frozen holder's side account,
+challenge after the window, resolve by a non-resolver, and more), plus one test
 that every check ran and passed.
 
     cargo test -p demo --test devnet -- --ignored --test-threads=1
@@ -44,13 +45,13 @@ check's result, is in [docs/DEVNET_RUN.md](docs/DEVNET_RUN.md). A new run writes
     anchor build
     cargo test --workspace --locked
 
-49 tests across the workspace:
+Every test in the workspace:
 
 | Suite | What it covers |
 |---|---|
 | `programs/slotbook/tests/happy_path.rs` | declare, commit, finalize, claim |
 | `programs/slotbook/tests/full_lifecycle.rs` | the full demo flow, plus the `Conflict` and `Expired` ruling paths |
-| `programs/slotbook/tests/guards.rs` | 10 attack and edge cases: permanent-delegate mints, pre-created vaults and Pending addresses, late commits, challenges after the window, double-binding in `resolve_challenge`, `register_total` challenges, release to a non-owner, close then `update_issuer` |
+| `programs/slotbook/tests/guards.rs` | 13 attack and edge cases: permanent-delegate mints, pre-created vaults and Pending addresses, late commits, challenges after the window, double-binding in `resolve_challenge`, `register_total` challenges, release to a non-owner, close then `update_issuer`, no cancelling after the record slot (also after an upheld ruling), freeze state read only from the holder's ATA |
 | `programs/slotbook/tests/program_smoke.rs` | the program loads and the IDL has the full interface |
 | `crates/snapshot/tests/spec_vectors.rs` | the Rust code matches test vectors from an independent Python implementation of the spec |
 | `crates/merkle`, `crates/snapshot`, `crates/attestor` | tree and proof unit tests; ledger replay on a LiteSVM harness |
@@ -206,6 +207,10 @@ link for every transaction. For a local validator run, see [crates/demo/README.m
 
 What the program defends against, what it trusts, and which test covers each defence:
 [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
+
+## License
+
+[Apache-2.0](LICENSE).
 
 ## Team
 

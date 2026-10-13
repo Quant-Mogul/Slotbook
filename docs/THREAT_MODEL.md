@@ -60,9 +60,10 @@ Anyone can recompute a root from a register with the independent Python code,
 | Claim before the window closes | Only from `Open` (`InvalidState`); `finalize` waits for the window (`WindowNotElapsed`) | devnet `claim_before_finalize`, `finalize_before_window` |
 | Pay a frozen (for example sanctioned) holder anyway | A frozen holder's payout goes to `Pending`, not to them | devnet `frozen_holder_goes_to_pending` |
 | Release a held payout while still frozen | `NotTransferable` | devnet `release_while_frozen` |
+| A frozen holder claims, or releases, through a thawed side account | Freeze state is read from the holder's associated token account only (`NotHolderAta`) | `guards::freeze_state_comes_from_the_holders_ata`, devnet `frozen_holder_cannot_claim_through_side_account` |
 | Release a held payout to someone else | Must go to an account the leaf owner owns (`NotLeafOwner`) | `guards::release_only_to_the_owner` |
 | Issuer sweeps a held payout early | Only after `hold_window_slots` (`HoldWindowNotElapsed`) | devnet `sweep_before_hold_window` |
-| Issuer closes and takes the vault early | Only after claim expiry with nothing pending (`CannotClose`) | devnet `close_before_claim_expiry` |
+| Issuer takes the vault back early | Cancelling (closing a `Declared` distribution with no commitment) only before the record slot; after it, including after an `Upheld` or `Expired` ruling resets the commitments, only after claim expiry, and an `Open` one only after claim expiry with nothing pending (`CannotClose`) | `guards::declared_close_after_record_slot_waits_for_expiry`, `guards::upheld_ruling_does_not_reopen_cancellation`, devnet `no_cancel_after_record_slot`, `close_before_claim_expiry` |
 | Issuer drains a vault through the token itself | Payment and bond mints with PermanentDelegate, TransferFee, TransferHook or ConfidentialTransfer are refused | `guards::bond_mint_with_permanent_delegate_is_refused`, `guards::payment_mint_with_permanent_delegate_is_refused` |
 | Block `claim` by pre-funding the Pending address | `create_pda_account` tops up, allocates and assigns | `guards::pre_funded_pending_address` |
 | Block `init_issuer` by pre-creating the bond vault | `init_if_needed` on the vault | `guards::bond_vault_pre_created_by_a_stranger` |
@@ -74,6 +75,16 @@ Anyone can recompute a root from a register with the independent Python code,
 Leaves are salted with a seed only the issuer, attestors and resolver know, so nobody
 else can test balance guesses against the root or a proof. This is not strong privacy:
 balances at a slot are public on-chain anyway. See spec section 5.
+
+## Known limitations in v1
+
+- **A slow resolver makes challenges free.** If the resolver misses the resolve timeout,
+  `Expired` refunds the challenger in full and drops every commitment, so anyone can delay a
+  payout at no cost while the resolver is unresponsive. Bounded by the resolver's liveness;
+  a resolver bond or resolver set would remove it.
+- **An attestor backs one distribution at a time.** `register_attestor` posts exactly one
+  `attestor_bond` and `commit_root` needs one bond per live commitment, so an attestor cannot
+  commit to overlapping distributions. A bond top-up instruction would remove it.
 
 ## Out of scope in v1
 
