@@ -1,7 +1,8 @@
 # Superbank proposal: holders of a mint at a slot
 
-Status: proposed; a design issue is open upstream. Target: [solana-rpc/superbank](https://github.com/solana-rpc/superbank) (Triton One,
-AGPL-3.0). Researched against v0.7.0 (2026-09-24) and main at `e49d4d7` (2026-10-07).
+Status: proposed; design issue open upstream: [solana-rpc/superbank#110](https://github.com/solana-rpc/superbank/issues/110). Target: [solana-rpc/superbank](https://github.com/solana-rpc/superbank) (Triton One,
+AGPL-3.0). Researched against v0.7.0 (2026-09-24) and main at `e49d4d7` (2026-10-07); SQL tested
+against v0.8.0 (2026-10-08).
 Spec: Slotbook Snapshot Spec v1.0 (`docs/SNAPSHOT_SPEC.md`), sections 3 and 4.
 
 ## Summary
@@ -68,7 +69,7 @@ Name: `getTokenHoldersAtSlot` (open to the maintainers' naming).
 | `mint` | yes | SPL Token or Token-2022 mint address |
 | `slot` | yes | Record slot S. State after every successful transaction in slots `<= S`. |
 | `commitment` | no | Only `finalized` is accepted. Anything else returns `-32602`. |
-| `minSlot` | no | Lower bound for the scan. Default: the first slot where the mint appears in `gsfa`. |
+| `minSlot` | no | Start of the scan. Default and maximum: the first slot where the mint appears in `gsfa`. A later value is refused, because holders whose last activity is before it would be missing. |
 | `limit` | no | Max rows per page (default and cap set by the operator). |
 | `paginationToken` | no | Opaque cursor (the last owner returned). |
 
@@ -97,16 +98,26 @@ Response:
 - `resolvedSlot` is S if a block was produced in S, else the first produced slot after S (spec 3.3).
 - `holderCount` and `total` cover the whole register, not just the page. `total` is the spec's
   `register_total`.
-- Errors: slot not yet covered by finalized data; a token balance with no owner; an all-zero owner;
+- Errors: slot not yet covered by finalized data; a `minSlot` after the mint's first slot; a token
+  balance with no owner; an all-zero owner;
   a transaction in range with missing metadata.
 
 ## SQL against Superbank's schema
 
-Written against `ddl/local/transactions.sql` and `ddl/local/blocks_metadata.sql` (unchanged
-between v0.7.0 and `e49d4d7`). It follows the patterns of Superbank's own `token_owner_activity`
+Written against `ddl/local/transactions.sql`, `ddl/local/blocks_metadata.sql` and `ddl/local/gsfa.sql`
+(v0.8.0 only added nullable columns to `blocks_metadata`; the columns used here are unchanged). It follows the patterns of Superbank's own `token_owner_activity`
 MV and `token_transfers` view.
 
-**Not yet run against ClickHouse.** Marked assumptions:
+**Tested** in chdb (embedded ClickHouse 26.9) against Superbank v0.8.0's `transactions`,
+`blocks_metadata` and `gsfa` DDL: `scripts/superbank/test_holders_at_slot.py` runs Query 1 and
+Query 2 exactly as written below. The expected register comes from a ledger simulator, not from
+the token-balance rows. Cases: two transfers in one slot, two accounts with one owner, a failed
+transaction, an account closed in the slot it was emptied, an address closed and reused for another
+mint (and the reverse), a zero balance, a `SetAuthority` owner change, an account only in v0 loaded
+addresses, a sum above `u64::MAX`, a transaction after S; and the guards for a late `minSlot`, a
+transaction without token metadata, and a NULL owner. Not tested: real mainnet data, performance.
+
+Assumptions about real data, still to confirm:
 
 - A1. Every transaction that changes a token account lists that account in its pre and post token
   balances, with the mint. (This is how Agave collects token balances. To confirm.)
@@ -193,8 +204,10 @@ SELECT
              OR meta_post_token_balances_present = 0))            AS rows_missing_meta;
 ```
 
-The handler refuses when `resolved_slot` is NULL or above the latest finalized ingested slot, when
-`rows_missing_meta > 0`, when any Query 1 owner is NULL, or when an owner is the all-zero address.
+The handler refuses, rather than answers, when `minSlot > first_mint_slot` (holders active only
+before `minSlot` would be missing), when `resolved_slot` is NULL or above the latest finalized
+ingested slot, when `rows_missing_meta > 0`, when any Query 1 owner is NULL, or when an owner is the
+all-zero address. Excluding such rows instead would return a wrong register without saying so.
 
 ### Performance
 
@@ -208,7 +221,8 @@ ranges, and too slow for years of mainnet. Two options for the maintainers:
   `owner`, `amount`. Built like `token_owner_activity`. Query 1 then reads one key range. It needs
   DDL in all three sets (`local`, `cluster`, `replicated`) and a backfill.
 
-I would start with the plain query and a required `minSlot`, and let the maintainers pick B1 or B2.
+I would start with the plain scan from the mint's first slot, and let the maintainers pick B1 or B2.
+This is about speed only: the start of the scan is fixed by the guard, not a tuning knob.
 
 ## Correctness mapping
 
@@ -265,8 +279,8 @@ Not in scope:
 
 ## Next steps
 
-1. Open a design issue on Superbank now with this method, the SQL and the questions below. Do not
-   write code before a maintainer replies on shape and indexing.
+1. Design issue opened: [solana-rpc/superbank#110](https://github.com/solana-rpc/superbank/issues/110).
+   Do not write code before a maintainer replies on shape and indexing.
 2. After review, send the method as a tested PR (Conventional Commit title, tests, k6 results,
    docs, DDL in all three sets if an index is added).
 3. Slotbook never depends on the merge. The attestor keeps its RPC replay as the default backend.
@@ -274,8 +288,8 @@ Not in scope:
 
 Questions for the maintainers:
 
-1. Is a plain range scan acceptable for a first version, or do you want a skip index or a
-   mint-keyed MV?
+1. Performance only (the start slot is fixed by the guard): is a plain range scan from the mint's
+   first slot acceptable for a first version, or do you want a skip index or a mint-keyed MV?
 2. How should the method prove every block in the range is ingested?
 3. Is the name, params and response shape (owner cursor pagination, string amounts) in line with
    `getTransactionsForAddress`?

@@ -123,7 +123,7 @@ MATCH: the on-chain root is reproduced byte for byte from the spec.
 
 ## Step 9 (not on-chain)
 
-Superbank design issue with SQL, and two issuer write-ups.
+Superbank design proposal: https://github.com/solana-rpc/superbank/issues/110 (docs/SUPERBANK_PROPOSAL.md).
 
 ## Checks: 32 of 32 passed
 
