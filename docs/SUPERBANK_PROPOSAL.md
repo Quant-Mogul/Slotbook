@@ -1,6 +1,6 @@
 # Superbank proposal: holders of a mint at a slot
 
-Status: proposed; a design issue is open upstream. Target: [solana-rpc/superbank](https://github.com/solana-rpc/superbank) (Triton One,
+Status: proposed; design issue open upstream: [solana-rpc/superbank#110](https://github.com/solana-rpc/superbank/issues/110). Target: [solana-rpc/superbank](https://github.com/solana-rpc/superbank) (Triton One,
 AGPL-3.0). Researched against v0.7.0 (2026-09-24) and main at `e49d4d7` (2026-10-07).
 Spec: Slotbook Snapshot Spec v1.0 (`docs/SNAPSHOT_SPEC.md`), sections 3 and 4.
 
