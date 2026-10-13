@@ -188,7 +188,7 @@ fn encode(a: &AddressBytes) -> String {
 }
 
 /// Apply `transactionIndex` when present; otherwise the signature's position in
-/// `getBlock(slot).transactions`. Errors if a signature is missing from that block.
+/// `getBlock(slot)` signature order. Errors if a signature is missing from that block.
 pub fn fill_tx_indices(
     txs: &mut [RawTx],
     parsed_index: &BTreeMap<String, Option<u32>>,
@@ -235,10 +235,33 @@ fn required_u64(obj: &Value, key: &str) -> Result<u64, AttestorError> {
 }
 
 pub fn parse_block_signatures(val: &Value) -> Result<Vec<String>, AttestorError> {
+    // Solana getBlock with transactionDetails="signatures" returns a top-level
+    // signatures array. Prefer that shape, while retaining support for full
+    // transaction responses and older fixtures.
+    if let Some(signatures) = val.get("signatures") {
+        let signatures = signatures
+            .as_array()
+            .ok_or_else(|| AttestorError::Rpc("getBlock signatures is not an array".into()))?;
+        return signatures
+            .iter()
+            .enumerate()
+            .map(|(i, signature)| {
+                signature
+                    .as_str()
+                    .map(str::to_string)
+                    .ok_or_else(|| {
+                        AttestorError::Rpc(format!(
+                            "getBlock signature {i} is not a string"
+                        ))
+                    })
+            })
+            .collect();
+    }
+
     let txs = val
         .get("transactions")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| AttestorError::Rpc("getBlock missing transactions".into()))?;
+        .ok_or_else(|| AttestorError::Rpc("getBlock missing signatures and transactions".into()))?;
     let mut out = Vec::with_capacity(txs.len());
     for (i, tx) in txs.iter().enumerate() {
         let sig = if let Some(s) = tx.as_str() {
@@ -691,6 +714,25 @@ mod tests {
             ]
         });
         assert_eq!(parse_block_signatures(&val).unwrap(), vec!["sig0", "sig1"]);
+    }
+
+    #[test]
+    fn block_signatures_from_top_level_signatures_array() {
+        let val = json!({
+            "blockhash": "example",
+            "parentSlot": 100,
+            "signatures": ["sig0", "sig1", "sig2"]
+        });
+        assert_eq!(
+            parse_block_signatures(&val).unwrap(),
+            vec!["sig0", "sig1", "sig2"]
+        );
+    }
+
+    #[test]
+    fn block_signatures_reject_non_string_entries() {
+        let val = json!({ "signatures": ["sig0", 123] });
+        assert!(parse_block_signatures(&val).is_err());
     }
 
     #[test]
