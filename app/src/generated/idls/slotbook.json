@@ -1,0 +1,3215 @@
+{
+  "address": "3ZaUF1Q6FH9HaD7kjMNVztaFtJxQY9U3Zk7CuR3wAqJp",
+  "metadata": {
+    "name": "slotbook",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "docs": [
+    "Slotbook: a verifiable, disputable record-date holder register for permissioned",
+    "SPL tokens. Use cases UC-1 to UC-14 and decisions D1 to D22 are in the scope lock;",
+    "the snapshot format is docs/SNAPSHOT_SPEC.md."
+  ],
+  "instructions": [
+    {
+      "name": "challenge",
+      "discriminator": [
+        16,
+        107,
+        14,
+        39,
+        244,
+        150,
+        81,
+        187
+      ],
+      "accounts": [
+        {
+          "name": "challenger",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "issuer_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.mint",
+                "account": "IssuerConfig"
+              }
+            ]
+          },
+          "relations": [
+            "distribution"
+          ]
+        },
+        {
+          "name": "distribution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  116,
+                  114,
+                  105,
+                  98,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "distribution.id",
+                "account": "Distribution"
+              }
+            ]
+          }
+        },
+        {
+          "name": "challenge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "distribution.challenge_count",
+                "account": "Distribution"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bond_mint"
+        },
+        {
+          "name": "bond_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "bond_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "bond_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "challenger_bond_account",
+          "writable": true
+        },
+        {
+          "name": "bond_token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "owner",
+          "type": "pubkey"
+        },
+        {
+          "name": "claimed_balance",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "claim",
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "holder",
+          "docs": [
+            "Must be the leaf owner (D10)."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "issuer_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.mint",
+                "account": "IssuerConfig"
+              }
+            ]
+          },
+          "relations": [
+            "distribution"
+          ]
+        },
+        {
+          "name": "distribution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  116,
+                  114,
+                  105,
+                  98,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "distribution.id",
+                "account": "Distribution"
+              }
+            ]
+          }
+        },
+        {
+          "name": "claim_receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "holder"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pending",
+          "docs": [
+            "Created in the handler only when the holder's account is not transferable,",
+            "because Anchor cannot init on one branch."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "holder"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payment_mint",
+          "relations": [
+            "distribution"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "payment_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "payment_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "holder_payment_account",
+          "writable": true
+        },
+        {
+          "name": "holder_mint_account",
+          "docs": [
+            "The holder's associated token account of the permissioned mint; read for freeze state.",
+            "It must be the ATA: with any account of theirs, a holder with one frozen and one",
+            "thawed account could pass the thawed one and skip Pending."
+          ]
+        },
+        {
+          "name": "payment_token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "balance",
+          "type": "u64"
+        },
+        {
+          "name": "salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "close_distribution",
+      "discriminator": [
+        238,
+        70,
+        219,
+        176,
+        69,
+        243,
+        141,
+        230
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "issuer_config"
+          ]
+        },
+        {
+          "name": "issuer_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.mint",
+                "account": "IssuerConfig"
+              }
+            ]
+          },
+          "relations": [
+            "distribution"
+          ]
+        },
+        {
+          "name": "distribution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  116,
+                  114,
+                  105,
+                  98,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "distribution.id",
+                "account": "Distribution"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payment_mint",
+          "relations": [
+            "distribution"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "payment_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "payment_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "issuer_payment_account",
+          "writable": true
+        },
+        {
+          "name": "payment_token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "commit_root",
+      "discriminator": [
+        142,
+        242,
+        81,
+        248,
+        39,
+        238,
+        194,
+        125
+      ],
+      "accounts": [
+        {
+          "name": "attestor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "issuer_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.mint",
+                "account": "IssuerConfig"
+              }
+            ]
+          },
+          "relations": [
+            "distribution"
+          ]
+        },
+        {
+          "name": "distribution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  116,
+                  114,
+                  105,
+                  98,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "distribution.id",
+                "account": "Distribution"
+              }
+            ]
+          }
+        },
+        {
+          "name": "attestor_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  116,
+                  116,
+                  101,
+                  115,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "attestor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "commitment",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  109,
+                  109,
+                  105,
+                  116,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "attestor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "CommitArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "declare_distribution",
+      "discriminator": [
+        29,
+        50,
+        99,
+        125,
+        40,
+        91,
+        172,
+        195
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "issuer_config"
+          ]
+        },
+        {
+          "name": "issuer_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.mint",
+                "account": "IssuerConfig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payment_mint"
+        },
+        {
+          "name": "distribution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  116,
+                  114,
+                  105,
+                  98,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.distribution_count",
+                "account": "IssuerConfig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "init_if_needed: anyone can create an ATA for any address, so a plain `init`",
+            "could be blocked by someone creating this vault first."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "payment_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "payment_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "issuer_payment_account",
+          "writable": true
+        },
+        {
+          "name": "payment_token_program"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "total",
+          "type": "u64"
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "salt_seed_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "finalize",
+      "discriminator": [
+        171,
+        61,
+        218,
+        56,
+        127,
+        115,
+        12,
+        217
+      ],
+      "accounts": [
+        {
+          "name": "distribution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  116,
+                  114,
+                  105,
+                  98,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "distribution.issuer_config",
+                "account": "Distribution"
+              },
+              {
+                "kind": "account",
+                "path": "distribution.id",
+                "account": "Distribution"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_issuer",
+      "discriminator": [
+        186,
+        77,
+        49,
+        118,
+        203,
+        47,
+        30,
+        79
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The permissioned Token-2022 mint being registered."
+          ]
+        },
+        {
+          "name": "bond_mint",
+          "docs": [
+            "Bonds are paid in this mint (D9, devnet USDC)."
+          ]
+        },
+        {
+          "name": "issuer_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bond_vault",
+          "docs": [
+            "init_if_needed: anyone can create an ATA for any address, so a plain `init`",
+            "could be blocked by someone creating this vault first."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "bond_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "bond_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "bond_token_program"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "IssuerParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "register_attestor",
+      "discriminator": [
+        68,
+        201,
+        86,
+        244,
+        51,
+        113,
+        15,
+        94
+      ],
+      "accounts": [
+        {
+          "name": "attestor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "issuer_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.mint",
+                "account": "IssuerConfig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "attestor_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  116,
+                  116,
+                  101,
+                  115,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "attestor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bond_mint"
+        },
+        {
+          "name": "bond_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "bond_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "bond_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "attestor_bond_account",
+          "writable": true
+        },
+        {
+          "name": "bond_token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "backend",
+          "type": {
+            "defined": {
+              "name": "Backend"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "release_attestor",
+      "discriminator": [
+        158,
+        67,
+        176,
+        176,
+        4,
+        182,
+        206,
+        13
+      ],
+      "accounts": [
+        {
+          "name": "distribution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  116,
+                  114,
+                  105,
+                  98,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "distribution.issuer_config",
+                "account": "Distribution"
+              },
+              {
+                "kind": "account",
+                "path": "distribution.id",
+                "account": "Distribution"
+              }
+            ]
+          },
+          "relations": [
+            "commitment"
+          ]
+        },
+        {
+          "name": "attestor_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  116,
+                  116,
+                  101,
+                  115,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "distribution.issuer_config",
+                "account": "Distribution"
+              },
+              {
+                "kind": "account",
+                "path": "commitment.attestor",
+                "account": "Commitment"
+              }
+            ]
+          }
+        },
+        {
+          "name": "commitment",
+          "docs": [
+            "Closes to the Attestor account, like a commitment voided in resolve_challenge,",
+            "so every commitment's rent reaches the attestor the same way: at withdraw_bond."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  109,
+                  109,
+                  105,
+                  116,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "commitment.attestor",
+                "account": "Commitment"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "release_pending",
+      "discriminator": [
+        24,
+        226,
+        163,
+        4,
+        150,
+        253,
+        20,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "issuer_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.mint",
+                "account": "IssuerConfig"
+              }
+            ]
+          },
+          "relations": [
+            "distribution"
+          ]
+        },
+        {
+          "name": "distribution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  116,
+                  114,
+                  105,
+                  98,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "distribution.id",
+                "account": "Distribution"
+              }
+            ]
+          },
+          "relations": [
+            "pending"
+          ]
+        },
+        {
+          "name": "pending",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "pending.owner",
+                "account": "Pending"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Receives the Pending rent (D11)."
+          ],
+          "writable": true,
+          "relations": [
+            "pending"
+          ]
+        },
+        {
+          "name": "payment_mint",
+          "relations": [
+            "distribution"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "payment_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "payment_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "holder_payment_account",
+          "writable": true
+        },
+        {
+          "name": "holder_mint_account",
+          "docs": [
+            "The holder's associated token account (see Claim), so a thawed side account cannot",
+            "release a payout held for a frozen holder."
+          ]
+        },
+        {
+          "name": "payment_token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "resolve_challenge",
+      "discriminator": [
+        81,
+        191,
+        124,
+        119,
+        131,
+        248,
+        157,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "docs": [
+            "The resolver, or any cranker for Ruling::Expired."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "issuer_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.mint",
+                "account": "IssuerConfig"
+              }
+            ]
+          },
+          "relations": [
+            "distribution"
+          ]
+        },
+        {
+          "name": "distribution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  116,
+                  114,
+                  105,
+                  98,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "distribution.id",
+                "account": "Distribution"
+              }
+            ]
+          }
+        },
+        {
+          "name": "challenge",
+          "docs": [
+            "Present for an owner challenge; absent for a root conflict (D3)."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "challenger",
+          "docs": [
+            "Receives the Challenge rent; must equal challenge.challenger."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "bond_mint"
+        },
+        {
+          "name": "bond_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "bond_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "bond_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "resolver_bond_account",
+          "writable": true
+        },
+        {
+          "name": "challenger_bond_account",
+          "docs": [
+            "Challenger's bond-mint account; owner checked in the handler."
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "issuer_bond_account",
+          "writable": true
+        },
+        {
+          "name": "bond_token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "ruling",
+          "type": {
+            "defined": {
+              "name": "Ruling"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "sweep_pending",
+      "discriminator": [
+        4,
+        68,
+        92,
+        154,
+        177,
+        126,
+        175,
+        214
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "issuer_config"
+          ]
+        },
+        {
+          "name": "issuer_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.mint",
+                "account": "IssuerConfig"
+              }
+            ]
+          },
+          "relations": [
+            "distribution"
+          ]
+        },
+        {
+          "name": "distribution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  116,
+                  114,
+                  105,
+                  98,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "distribution.id",
+                "account": "Distribution"
+              }
+            ]
+          },
+          "relations": [
+            "pending"
+          ]
+        },
+        {
+          "name": "pending",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "pending.owner",
+                "account": "Pending"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Receives the Pending rent (D11)."
+          ],
+          "writable": true,
+          "relations": [
+            "pending"
+          ]
+        },
+        {
+          "name": "payment_mint",
+          "relations": [
+            "distribution"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "distribution"
+              },
+              {
+                "kind": "account",
+                "path": "payment_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "payment_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "issuer_payment_account",
+          "writable": true
+        },
+        {
+          "name": "payment_token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_issuer",
+      "discriminator": [
+        9,
+        100,
+        234,
+        30,
+        84,
+        43,
+        30,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "issuer_config"
+          ]
+        },
+        {
+          "name": "issuer_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.mint",
+                "account": "IssuerConfig"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "IssuerParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw_bond",
+      "discriminator": [
+        222,
+        199,
+        141,
+        31,
+        188,
+        93,
+        155,
+        40
+      ],
+      "accounts": [
+        {
+          "name": "attestor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "issuer_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  115,
+                  115,
+                  117,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config.mint",
+                "account": "IssuerConfig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "attestor_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  116,
+                  116,
+                  101,
+                  115,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "attestor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bond_mint"
+        },
+        {
+          "name": "bond_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "issuer_config"
+              },
+              {
+                "kind": "account",
+                "path": "bond_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "bond_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "attestor_bond_account",
+          "writable": true
+        },
+        {
+          "name": "bond_token_program"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Attestor",
+      "discriminator": [
+        253,
+        240,
+        76,
+        196,
+        16,
+        53,
+        239,
+        173
+      ]
+    },
+    {
+      "name": "Challenge",
+      "discriminator": [
+        119,
+        250,
+        161,
+        121,
+        119,
+        81,
+        22,
+        208
+      ]
+    },
+    {
+      "name": "ClaimReceipt",
+      "discriminator": [
+        223,
+        233,
+        11,
+        229,
+        124,
+        165,
+        207,
+        28
+      ]
+    },
+    {
+      "name": "Commitment",
+      "discriminator": [
+        61,
+        112,
+        129,
+        128,
+        24,
+        147,
+        77,
+        87
+      ]
+    },
+    {
+      "name": "Distribution",
+      "discriminator": [
+        176,
+        85,
+        17,
+        11,
+        13,
+        194,
+        18,
+        1
+      ]
+    },
+    {
+      "name": "IssuerConfig",
+      "discriminator": [
+        238,
+        244,
+        71,
+        221,
+        254,
+        169,
+        247,
+        237
+      ]
+    },
+    {
+      "name": "Pending",
+      "discriminator": [
+        36,
+        180,
+        147,
+        170,
+        72,
+        175,
+        173,
+        126
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NotImplemented",
+      "msg": "Instruction not implemented yet"
+    },
+    {
+      "code": 6001,
+      "name": "NotMintAuthority",
+      "msg": "Signer is not the mint's mint authority, or it is unset"
+    },
+    {
+      "code": 6002,
+      "name": "FreezeAuthorityNotTokenAcl",
+      "msg": "Mint freeze authority is not the Token ACL MintConfig PDA"
+    },
+    {
+      "code": 6003,
+      "name": "MissingDefaultAccountState",
+      "msg": "Mint must carry DefaultAccountState"
+    },
+    {
+      "code": 6004,
+      "name": "DefaultStateNotFrozen",
+      "msg": "Mint DefaultAccountState must be Frozen"
+    },
+    {
+      "code": 6005,
+      "name": "ConfidentialTransferMint",
+      "msg": "Mints with the confidential-transfer extension are not supported"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidParams",
+      "msg": "Invalid issuer parameters"
+    },
+    {
+      "code": 6007,
+      "name": "TooManyAttestors",
+      "msg": "Too many attestors"
+    },
+    {
+      "code": 6008,
+      "name": "ResolverConflict",
+      "msg": "Resolver must be neither the authority nor an attestor"
+    },
+    {
+      "code": 6009,
+      "name": "ResolverFeeTooHigh",
+      "msg": "resolver_fee must be below both bonds"
+    },
+    {
+      "code": 6010,
+      "name": "ActiveDistributions",
+      "msg": "Distributions are still active"
+    },
+    {
+      "code": 6011,
+      "name": "NotAuthority",
+      "msg": "Signer is not the issuer authority"
+    },
+    {
+      "code": 6012,
+      "name": "RecordSlotTooSoon",
+      "msg": "Record slot is not far enough in the future"
+    },
+    {
+      "code": 6013,
+      "name": "UnsupportedPaymentMint",
+      "msg": "Payment mint has a disallowed extension"
+    },
+    {
+      "code": 6014,
+      "name": "UnsupportedBondMint",
+      "msg": "Bond mint has a disallowed extension"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidState",
+      "msg": "Distribution is not in the required state"
+    },
+    {
+      "code": 6016,
+      "name": "CannotClose",
+      "msg": "Distribution cannot be closed yet"
+    },
+    {
+      "code": 6017,
+      "name": "NotAnAttestor",
+      "msg": "Signer is not in the issuer's attestor set"
+    },
+    {
+      "code": 6018,
+      "name": "FinalityMarginNotPassed",
+      "msg": "Finality margin after the record slot has not passed"
+    },
+    {
+      "code": 6019,
+      "name": "InsufficientBond",
+      "msg": "Attestor bond does not cover another commitment"
+    },
+    {
+      "code": 6020,
+      "name": "RootMismatch",
+      "msg": "Root or register_total does not match the final commitment"
+    },
+    {
+      "code": 6021,
+      "name": "UnsupportedSpecVersion",
+      "msg": "Spec version is not supported"
+    },
+    {
+      "code": 6022,
+      "name": "LiveCommitments",
+      "msg": "Attestor still has live commitments"
+    },
+    {
+      "code": 6023,
+      "name": "EmptyRegister",
+      "msg": "Register is empty; nothing to commit (spec 3.7)"
+    },
+    {
+      "code": 6024,
+      "name": "WindowClosed",
+      "msg": "Challenge window is closed"
+    },
+    {
+      "code": 6025,
+      "name": "WindowNotElapsed",
+      "msg": "Challenge window has not elapsed"
+    },
+    {
+      "code": 6026,
+      "name": "NotResolver",
+      "msg": "Signer is not the resolver"
+    },
+    {
+      "code": 6027,
+      "name": "TimeoutNotReached",
+      "msg": "Resolve timeout has not been reached"
+    },
+    {
+      "code": 6028,
+      "name": "CommitmentSetMismatch",
+      "msg": "Remaining accounts must be every live commitment and its attestor"
+    },
+    {
+      "code": 6029,
+      "name": "WrongChallenge",
+      "msg": "Challenge account does not match the open challenge"
+    },
+    {
+      "code": 6030,
+      "name": "InvalidRuling",
+      "msg": "Ruling does not fit this kind of dispute"
+    },
+    {
+      "code": 6031,
+      "name": "ClaimExpired",
+      "msg": "Claim period has expired"
+    },
+    {
+      "code": 6032,
+      "name": "ProofTooDeep",
+      "msg": "Merkle proof is too deep"
+    },
+    {
+      "code": 6033,
+      "name": "InvalidProof",
+      "msg": "Merkle proof is invalid"
+    },
+    {
+      "code": 6034,
+      "name": "NotLeafOwner",
+      "msg": "Token account is not owned by the leaf owner"
+    },
+    {
+      "code": 6035,
+      "name": "WrongMint",
+      "msg": "Token account is for the wrong mint"
+    },
+    {
+      "code": 6036,
+      "name": "HoldWindowNotElapsed",
+      "msg": "Hold window has not elapsed"
+    },
+    {
+      "code": 6037,
+      "name": "HoldWindowElapsed",
+      "msg": "Hold window has elapsed"
+    },
+    {
+      "code": 6038,
+      "name": "NotTransferable",
+      "msg": "Holder's mint account is not transferable yet"
+    },
+    {
+      "code": 6039,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6040,
+      "name": "InvariantViolated",
+      "msg": "claimed + pending + swept would exceed total"
+    },
+    {
+      "code": 6041,
+      "name": "NotHolderAta",
+      "msg": "Holder's mint account must be their associated token account"
+    }
+  ],
+  "types": [
+    {
+      "name": "Attestor",
+      "docs": [
+        "[\"attestor\", issuer_config, attestor]. Closed by withdraw_bond."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "issuer_config",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bond_amount",
+            "type": "u64"
+          },
+          {
+            "name": "backend",
+            "type": {
+              "defined": {
+                "name": "Backend"
+              }
+            }
+          },
+          {
+            "name": "active_commitments",
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Backend",
+      "docs": [
+        "Reconstruction backend an attestor declares. Matches the manifest `backend` byte."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "LedgerReplay"
+          },
+          {
+            "name": "StateArchive"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Challenge",
+      "docs": [
+        "[\"challenge\", distribution, index_u32_le]. Closed at resolution, rent to challenger (D1)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "distribution",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u32"
+          },
+          {
+            "name": "challenger",
+            "type": "pubkey"
+          },
+          {
+            "name": "root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "owner",
+            "docs": [
+              "Pubkey::default() disputes register_total (D22)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "claimed_balance",
+            "type": "u64"
+          },
+          {
+            "name": "bond",
+            "type": "u64"
+          },
+          {
+            "name": "opened_slot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ClaimReceipt",
+      "docs": [
+        "[\"claim\", distribution, owner]. Never closed; blocks a second claim."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "distribution",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "balance",
+            "type": "u64"
+          },
+          {
+            "name": "payout",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "ClaimStatus"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ClaimStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Paid"
+          },
+          {
+            "name": "Pending"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CommitArgs",
+      "docs": [
+        "Data an attestor commits (UC-4). Mirrors the manifest (spec section 11)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "manifest_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "register_total",
+            "type": "u64"
+          },
+          {
+            "name": "resolved_slot",
+            "type": "u64"
+          },
+          {
+            "name": "first_covered_slot",
+            "type": "u64"
+          },
+          {
+            "name": "rows",
+            "type": "u32"
+          },
+          {
+            "name": "spec_version",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Commitment",
+      "docs": [
+        "[\"commitment\", distribution, attestor]. Closed at resolve or release_attestor (D8)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "distribution",
+            "type": "pubkey"
+          },
+          {
+            "name": "attestor",
+            "type": "pubkey"
+          },
+          {
+            "name": "root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "manifest_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "backend",
+            "type": {
+              "defined": {
+                "name": "Backend"
+              }
+            }
+          },
+          {
+            "name": "register_total",
+            "type": "u64"
+          },
+          {
+            "name": "resolved_slot",
+            "type": "u64"
+          },
+          {
+            "name": "first_covered_slot",
+            "type": "u64"
+          },
+          {
+            "name": "rows",
+            "type": "u32"
+          },
+          {
+            "name": "spec_version",
+            "type": "u16"
+          },
+          {
+            "name": "posted_slot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DisputeKind",
+      "docs": [
+        "Why a distribution is Disputed (D3): an owner challenge, or attestor roots that differ."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Owner"
+          },
+          {
+            "name": "Conflict"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Distribution",
+      "docs": [
+        "[\"distribution\", issuer_config, id_u64_le]. Never closed; Closed is terminal (D7).",
+        "Owns the distribution vault."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "issuer_config",
+            "type": "pubkey"
+          },
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "payment_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "record_slot",
+            "type": "u64"
+          },
+          {
+            "name": "total",
+            "type": "u64"
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "DistributionState"
+              }
+            }
+          },
+          {
+            "name": "final_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "register_total",
+            "type": "u64"
+          },
+          {
+            "name": "salt_seed_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "claimed_total",
+            "type": "u64"
+          },
+          {
+            "name": "pending_total",
+            "type": "u64"
+          },
+          {
+            "name": "swept_total",
+            "type": "u64"
+          },
+          {
+            "name": "declared_slot",
+            "type": "u64"
+          },
+          {
+            "name": "window_end_slot",
+            "type": "u64"
+          },
+          {
+            "name": "slots_remaining",
+            "type": "u64"
+          },
+          {
+            "name": "open_slot",
+            "type": "u64"
+          },
+          {
+            "name": "commitment_count",
+            "type": "u32"
+          },
+          {
+            "name": "challenge_count",
+            "type": "u32"
+          },
+          {
+            "name": "open_challenge_index",
+            "type": {
+              "option": "u32"
+            }
+          },
+          {
+            "name": "dispute_kind",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "DisputeKind"
+                }
+              }
+            }
+          },
+          {
+            "name": "dispute_opened_slot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DistributionState",
+      "docs": [
+        "Distribution lifecycle. See the brief, section 4."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Declared"
+          },
+          {
+            "name": "Committed"
+          },
+          {
+            "name": "Disputed"
+          },
+          {
+            "name": "Open"
+          },
+          {
+            "name": "Closed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IssuerConfig",
+      "docs": [
+        "[\"issuer\", mint]. Never closed (D18). Owns the bond vault."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "bond_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "attestors",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "quorum",
+            "type": "u8"
+          },
+          {
+            "name": "require_both_backends",
+            "type": "bool"
+          },
+          {
+            "name": "resolver",
+            "type": "pubkey"
+          },
+          {
+            "name": "notice_slots",
+            "type": "u64"
+          },
+          {
+            "name": "finality_margin_slots",
+            "type": "u64"
+          },
+          {
+            "name": "challenge_window_slots",
+            "type": "u64"
+          },
+          {
+            "name": "resolve_timeout_slots",
+            "type": "u64"
+          },
+          {
+            "name": "hold_window_slots",
+            "type": "u64"
+          },
+          {
+            "name": "claim_expiry_slots",
+            "type": "u64"
+          },
+          {
+            "name": "attestor_bond",
+            "type": "u64"
+          },
+          {
+            "name": "challenger_bond",
+            "type": "u64"
+          },
+          {
+            "name": "resolver_fee",
+            "type": "u64"
+          },
+          {
+            "name": "distribution_count",
+            "type": "u64"
+          },
+          {
+            "name": "active_distributions",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IssuerParams",
+      "docs": [
+        "Parameters set at init_issuer and replaced by update_issuer (D18, D19)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "attestors",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "quorum",
+            "type": "u8"
+          },
+          {
+            "name": "require_both_backends",
+            "type": "bool"
+          },
+          {
+            "name": "resolver",
+            "type": "pubkey"
+          },
+          {
+            "name": "notice_slots",
+            "type": "u64"
+          },
+          {
+            "name": "finality_margin_slots",
+            "type": "u64"
+          },
+          {
+            "name": "challenge_window_slots",
+            "type": "u64"
+          },
+          {
+            "name": "resolve_timeout_slots",
+            "type": "u64"
+          },
+          {
+            "name": "hold_window_slots",
+            "type": "u64"
+          },
+          {
+            "name": "claim_expiry_slots",
+            "type": "u64"
+          },
+          {
+            "name": "attestor_bond",
+            "type": "u64"
+          },
+          {
+            "name": "challenger_bond",
+            "type": "u64"
+          },
+          {
+            "name": "resolver_fee",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Pending",
+      "docs": [
+        "[\"pending\", distribution, owner]. A frozen holder's payout, held (D10, D11)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "distribution",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "created_slot",
+            "type": "u64"
+          },
+          {
+            "name": "payer",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Ruling",
+      "docs": [
+        "Resolver ruling for resolve_challenge (D3, D4, D5, D17)."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Upheld"
+          },
+          {
+            "name": "Rejected"
+          },
+          {
+            "name": "Conflict",
+            "fields": [
+              {
+                "name": "root",
+                "type": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "name": "Expired"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "ATTESTOR_SEED",
+      "type": "bytes",
+      "value": "[97, 116, 116, 101, 115, 116, 111, 114]"
+    },
+    {
+      "name": "CHALLENGE_SEED",
+      "type": "bytes",
+      "value": "[99, 104, 97, 108, 108, 101, 110, 103, 101]"
+    },
+    {
+      "name": "CLAIM_SEED",
+      "type": "bytes",
+      "value": "[99, 108, 97, 105, 109]"
+    },
+    {
+      "name": "COMMITMENT_SEED",
+      "type": "bytes",
+      "value": "[99, 111, 109, 109, 105, 116, 109, 101, 110, 116]"
+    },
+    {
+      "name": "DISTRIBUTION_SEED",
+      "type": "bytes",
+      "value": "[100, 105, 115, 116, 114, 105, 98, 117, 116, 105, 111, 110]"
+    },
+    {
+      "name": "ISSUER_SEED",
+      "type": "bytes",
+      "value": "[105, 115, 115, 117, 101, 114]"
+    },
+    {
+      "name": "MAX_PROOF_DEPTH",
+      "docs": [
+        "Merkle proofs are bounded before the loop (D13, spec section 8)."
+      ],
+      "type": "u8",
+      "value": "32"
+    },
+    {
+      "name": "PENDING_SEED",
+      "type": "bytes",
+      "value": "[112, 101, 110, 100, 105, 110, 103]"
+    },
+    {
+      "name": "SPEC_VERSION",
+      "docs": [
+        "docs/SNAPSHOT_SPEC.md v1.0."
+      ],
+      "type": "u16",
+      "value": "100"
+    }
+  ]
+}
