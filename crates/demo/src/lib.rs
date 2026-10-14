@@ -906,6 +906,9 @@ fn demo(run: &mut Run, args: &Args) -> Result<()> {
     run.send("finalize", &[finalize_ix], &[&issuer])?;
     let d: Distribution = run.read(&distribution)?;
     run.check("finalize_opens_claims", d.state == DistributionState::Open, format!("{:?}", d.state));
+    // Checked right after finalize, where expiry is a full claim_expiry_slots away. Later in the
+    // run a slow RPC connection can use up that margin, and then closing is rightly allowed.
+    run.expect_refused("close_before_claim_expiry", &[close_ix.clone()], &[&issuer], &code("CannotClose"))?;
 
     // An outsider with their own accounts tries to claim A's leaf.
     let outsider = challengers[0].insecure_clone();
@@ -1066,7 +1069,6 @@ fn demo(run: &mut Run, args: &Args) -> Result<()> {
         issuer_back == 200 * ONE && d.swept_total == 200 * ONE && d.pending_total == 0,
         format!("C stayed frozen; {} swept back to the issuer", usdc(issuer_back)),
     );
-    run.expect_refused("close_before_claim_expiry", &[close_ix.clone()], &[&issuer], &code("CannotClose"))?;
     run.wait_for_slot(d.open_slot + args.claim_expiry_slots, "claim expiry")?;
     run.send("close_distribution", &[close_ix], &[&issuer])?;
     let d: Distribution = run.read(&distribution)?;
