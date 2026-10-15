@@ -46,7 +46,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;display:none}
 .hero{width:100%;display:block;padding:0;min-height:0;position:relative;overflow:hidden}
 .hero:after{display:none}
 .hero-inner{position:relative;z-index:1;min-height:0;display:block}
-.hero-inner .site-header{margin-top:0;margin-bottom:0;margin-left:auto;margin-right:auto}
+.hero-inner .site-header{width:100%;margin-top:0;margin-bottom:0;margin-left:auto;margin-right:auto}
 .hero-copy{margin-top:92px}
 .hero-lens{position:absolute;z-index:0;border-radius:50%;pointer-events:none;filter:blur(70px);will-change:transform,opacity;mix-blend-mode:screen}
 .hero-lens-a{width:430px;height:430px;top:-170px;left:24%;background:#f4474f24;animation:lensDriftA 14s ease-in-out infinite alternate}
