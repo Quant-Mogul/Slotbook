@@ -32,27 +32,32 @@ const stages = [
 export default function Home() {
   return (
     <main>
-      <section className="hero shell">
-        <SiteHeader />
-        <LandingMotion />
-        <div className="hero-copy">
-          <p className="eyebrow">SLOTBOOK / RECORD-DATE PROTOCOL</p>
-          <h1>
-            VERIFIABLE
-            <br />
-            <em>DISTRIBUTIONS</em>
-            <br />
-            AT EVERY SLOT.
-          </h1>
-          <p className="hero-lede">
-            A holder register for permissioned tokens. Replay the history, commit the root, resolve
-            the dispute, release the value.
-          </p>
-          <div className="hero-actions">
-            <AngularButton href="/docs">Explore the docs</AngularButton>
-            <AngularButton href="#flow" secondary>
-              See the flow
-            </AngularButton>
+      <section className="hero">
+        <div className="hero-lens hero-lens-a" aria-hidden="true" />
+        <div className="hero-lens hero-lens-b" aria-hidden="true" />
+        <div className="hero-lens hero-lens-c" aria-hidden="true" />
+        <div className="hero-inner shell">
+          <SiteHeader />
+          <LandingMotion />
+          <div className="hero-copy">
+            <p className="eyebrow">SLOTBOOK / RECORD-DATE PROTOCOL</p>
+            <h1>
+              VERIFIABLE
+              <br />
+              <em>DISTRIBUTIONS</em>
+              <br />
+              AT EVERY SLOT.
+            </h1>
+            <p className="hero-lede">
+              A holder register for permissioned tokens. Replay the history, commit the root,
+              resolve the dispute, release the value.
+            </p>
+            <div className="hero-actions">
+              <AngularButton href="/docs">Explore the docs</AngularButton>
+              <AngularButton href="#flow" secondary>
+                See the flow
+              </AngularButton>
+            </div>
           </div>
         </div>
       </section>
@@ -62,6 +67,12 @@ export default function Home() {
         <div>RECORD-DATE CLAIMS</div>
         <div>ON SOLANA</div>
       </section>
+      <div className="tape-separator" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <div className="pattern-dots tape-dots" />
+      </div>
       <section className="section shell" id="protocol">
         <div className="section-intro">
           <p className="eyebrow">[ 001 ] / THE REGISTER</p>
@@ -95,6 +106,7 @@ export default function Home() {
         </div>
       </section>
       <section className="section flow-section shell" id="flow">
+        <div className="pattern-dots flow-dots" aria-hidden="true" />
         <div className="section-kicker">
           <p className="eyebrow">[ 002 ] / THE LIFECYCLE</p>
           <p className="mono">DECLARE → RECORD → SETTLE</p>
@@ -168,6 +180,8 @@ export default function Home() {
         <AngularButton href="/docs">Start with the docs</AngularButton>
       </section>
       <footer className="footer shell">
+        <div className="pattern-dots footer-dots" aria-hidden="true" />
+        <div className="pattern-stripes footer-stripes" aria-hidden="true" />
         <span>© 2026 SLOTBOOK</span>
         <span>BUILT FOR DISPUTABLE DISTRIBUTIONS</span>
         <a href="https://github.com" rel="noreferrer">

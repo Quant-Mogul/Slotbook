@@ -28,6 +28,13 @@ export default function DocsLayout({ children }: Readonly<{ children: React.Reac
         </aside>
         <article className="docs-content">{children}</article>
       </div>
+      <footer className="docs-footer">
+        <div className="pattern-dots docs-footer-dots" aria-hidden="true" />
+        <div className="pattern-stripes docs-footer-stripes" aria-hidden="true" />
+        <span>© 2026 SLOTBOOK / PROTOCOL REFERENCE</span>
+        <span>GENERATED FROM PROGRAM SOURCE</span>
+        <Link href="/">BACK TO PROTOCOL ↗</Link>
+      </footer>
     </div>
   );
 }
