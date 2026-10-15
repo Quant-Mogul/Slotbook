@@ -1,0 +1,700 @@
+{
+  "generatedFrom": "target/idl/slotbook.json",
+  "instructions": [
+    {
+      "name": "challenge",
+      "signature": "challenge(owner: \"pubkey\", claimed_balance: \"u64\")",
+      "description": "Open a challenge against a holder leaf during the challenge window.",
+      "args": [
+        {
+          "name": "owner",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "claimed_balance",
+          "type": "\"u64\""
+        }
+      ],
+      "context": "ChallengeContext"
+    },
+    {
+      "name": "claim",
+      "signature": "claim(balance: \"u64\", salt: {\"array\":[\"u8\",32]}, proof: {\"vec\":{\"array\":[\"u8\",32]}})",
+      "description": "Claim a finalized holder balance using its Merkle proof.",
+      "args": [
+        {
+          "name": "balance",
+          "type": "\"u64\""
+        },
+        {
+          "name": "salt",
+          "type": "{\"array\":[\"u8\",32]}"
+        },
+        {
+          "name": "proof",
+          "type": "{\"vec\":{\"array\":[\"u8\",32]}}"
+        }
+      ],
+      "context": "ClaimContext"
+    },
+    {
+      "name": "close_distribution",
+      "signature": "close_distribution()",
+      "description": "Close a completed distribution and reclaim its remaining state rent.",
+      "args": [],
+      "context": "Close_distributionContext"
+    },
+    {
+      "name": "commit_root",
+      "signature": "commit_root(args: {\"defined\":{\"name\":\"CommitArgs\"}})",
+      "description": "Commit the attestor's Merkle root for balances reconstructed at the record slot.",
+      "args": [
+        {
+          "name": "args",
+          "type": "{\"defined\":{\"name\":\"CommitArgs\"}}"
+        }
+      ],
+      "context": "Commit_rootContext"
+    },
+    {
+      "name": "declare_distribution",
+      "signature": "declare_distribution(total: \"u64\", record_slot: \"u64\", salt_seed_hash: {\"array\":[\"u8\",32]})",
+      "description": "Create a distribution with a total, future record slot, and salt commitment.",
+      "args": [
+        {
+          "name": "total",
+          "type": "\"u64\""
+        },
+        {
+          "name": "record_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "salt_seed_hash",
+          "type": "{\"array\":[\"u8\",32]}"
+        }
+      ],
+      "context": "Declare_distributionContext"
+    },
+    {
+      "name": "finalize",
+      "signature": "finalize()",
+      "description": "Finalize a distribution after the challenge window closes.",
+      "args": [],
+      "context": "FinalizeContext"
+    },
+    {
+      "name": "init_issuer",
+      "signature": "init_issuer(params: {\"defined\":{\"name\":\"IssuerParams\"}})",
+      "description": "Register an issuer and verify that the issuer controls the token mint.",
+      "args": [
+        {
+          "name": "params",
+          "type": "{\"defined\":{\"name\":\"IssuerParams\"}}"
+        }
+      ],
+      "context": "Init_issuerContext"
+    },
+    {
+      "name": "register_attestor",
+      "signature": "register_attestor(backend: {\"defined\":{\"name\":\"Backend\"}})",
+      "description": "Authorize an attestor backend to replay history and commit roots.",
+      "args": [
+        {
+          "name": "backend",
+          "type": "{\"defined\":{\"name\":\"Backend\"}}"
+        }
+      ],
+      "context": "Register_attestorContext"
+    },
+    {
+      "name": "release_attestor",
+      "signature": "release_attestor()",
+      "description": "Release an attestor bond after the distribution lifecycle completes.",
+      "args": [],
+      "context": "Release_attestorContext"
+    },
+    {
+      "name": "release_pending",
+      "signature": "release_pending()",
+      "description": "Release a pending frozen-holder claim after the holder is thawed.",
+      "args": [],
+      "context": "Release_pendingContext"
+    },
+    {
+      "name": "resolve_challenge",
+      "signature": "resolve_challenge(ruling: {\"defined\":{\"name\":\"Ruling\"}})",
+      "description": "Resolve an open challenge with the protocol's ruling.",
+      "args": [
+        {
+          "name": "ruling",
+          "type": "{\"defined\":{\"name\":\"Ruling\"}}"
+        }
+      ],
+      "context": "Resolve_challengeContext"
+    },
+    {
+      "name": "sweep_pending",
+      "signature": "sweep_pending()",
+      "description": "Sweep unresolved pending funds according to the distribution rules.",
+      "args": [],
+      "context": "Sweep_pendingContext"
+    },
+    {
+      "name": "update_issuer",
+      "signature": "update_issuer(params: {\"defined\":{\"name\":\"IssuerParams\"}})",
+      "description": "Update the issuer configuration for an existing registry.",
+      "args": [
+        {
+          "name": "params",
+          "type": "{\"defined\":{\"name\":\"IssuerParams\"}}"
+        }
+      ],
+      "context": "Update_issuerContext"
+    },
+    {
+      "name": "withdraw_bond",
+      "signature": "withdraw_bond()",
+      "description": "Withdraw an attestor bond after its release conditions are met.",
+      "args": [],
+      "context": "Withdraw_bondContext"
+    }
+  ],
+  "definitions": {
+    "Attestor": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "issuer_config",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "authority",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "bond_amount",
+          "type": "\"u64\""
+        },
+        {
+          "name": "backend",
+          "type": "{\"defined\":{\"name\":\"Backend\"}}"
+        },
+        {
+          "name": "active_commitments",
+          "type": "\"u32\""
+        },
+        {
+          "name": "bump",
+          "type": "\"u8\""
+        }
+      ]
+    },
+    "Backend": {
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "LedgerReplay",
+          "fields": []
+        },
+        {
+          "name": "StateArchive",
+          "fields": []
+        }
+      ]
+    },
+    "Challenge": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "distribution",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "index",
+          "type": "\"u32\""
+        },
+        {
+          "name": "challenger",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "root",
+          "type": "{\"array\":[\"u8\",32]}"
+        },
+        {
+          "name": "owner",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "claimed_balance",
+          "type": "\"u64\""
+        },
+        {
+          "name": "bond",
+          "type": "\"u64\""
+        },
+        {
+          "name": "opened_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "bump",
+          "type": "\"u8\""
+        }
+      ]
+    },
+    "ClaimReceipt": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "distribution",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "owner",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "balance",
+          "type": "\"u64\""
+        },
+        {
+          "name": "payout",
+          "type": "\"u64\""
+        },
+        {
+          "name": "status",
+          "type": "{\"defined\":{\"name\":\"ClaimStatus\"}}"
+        },
+        {
+          "name": "bump",
+          "type": "\"u8\""
+        }
+      ]
+    },
+    "ClaimStatus": {
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Paid",
+          "fields": []
+        },
+        {
+          "name": "Pending",
+          "fields": []
+        }
+      ]
+    },
+    "CommitArgs": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "root",
+          "type": "{\"array\":[\"u8\",32]}"
+        },
+        {
+          "name": "manifest_hash",
+          "type": "{\"array\":[\"u8\",32]}"
+        },
+        {
+          "name": "register_total",
+          "type": "\"u64\""
+        },
+        {
+          "name": "resolved_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "first_covered_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "rows",
+          "type": "\"u32\""
+        },
+        {
+          "name": "spec_version",
+          "type": "\"u16\""
+        }
+      ]
+    },
+    "Commitment": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "distribution",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "attestor",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "root",
+          "type": "{\"array\":[\"u8\",32]}"
+        },
+        {
+          "name": "manifest_hash",
+          "type": "{\"array\":[\"u8\",32]}"
+        },
+        {
+          "name": "backend",
+          "type": "{\"defined\":{\"name\":\"Backend\"}}"
+        },
+        {
+          "name": "register_total",
+          "type": "\"u64\""
+        },
+        {
+          "name": "resolved_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "first_covered_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "rows",
+          "type": "\"u32\""
+        },
+        {
+          "name": "spec_version",
+          "type": "\"u16\""
+        },
+        {
+          "name": "posted_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "bump",
+          "type": "\"u8\""
+        }
+      ]
+    },
+    "DisputeKind": {
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Owner",
+          "fields": []
+        },
+        {
+          "name": "Conflict",
+          "fields": []
+        }
+      ]
+    },
+    "Distribution": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "issuer_config",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "id",
+          "type": "\"u64\""
+        },
+        {
+          "name": "payment_mint",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "record_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "total",
+          "type": "\"u64\""
+        },
+        {
+          "name": "state",
+          "type": "{\"defined\":{\"name\":\"DistributionState\"}}"
+        },
+        {
+          "name": "final_root",
+          "type": "{\"array\":[\"u8\",32]}"
+        },
+        {
+          "name": "register_total",
+          "type": "\"u64\""
+        },
+        {
+          "name": "salt_seed_hash",
+          "type": "{\"array\":[\"u8\",32]}"
+        },
+        {
+          "name": "claimed_total",
+          "type": "\"u64\""
+        },
+        {
+          "name": "pending_total",
+          "type": "\"u64\""
+        },
+        {
+          "name": "swept_total",
+          "type": "\"u64\""
+        },
+        {
+          "name": "declared_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "window_end_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "slots_remaining",
+          "type": "\"u64\""
+        },
+        {
+          "name": "open_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "commitment_count",
+          "type": "\"u32\""
+        },
+        {
+          "name": "challenge_count",
+          "type": "\"u32\""
+        },
+        {
+          "name": "open_challenge_index",
+          "type": "{\"option\":\"u32\"}"
+        },
+        {
+          "name": "dispute_kind",
+          "type": "{\"option\":{\"defined\":{\"name\":\"DisputeKind\"}}}"
+        },
+        {
+          "name": "dispute_opened_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "bump",
+          "type": "\"u8\""
+        }
+      ]
+    },
+    "DistributionState": {
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Declared",
+          "fields": []
+        },
+        {
+          "name": "Committed",
+          "fields": []
+        },
+        {
+          "name": "Disputed",
+          "fields": []
+        },
+        {
+          "name": "Open",
+          "fields": []
+        },
+        {
+          "name": "Closed",
+          "fields": []
+        }
+      ]
+    },
+    "IssuerConfig": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "authority",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "mint",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "bond_mint",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "attestors",
+          "type": "{\"vec\":\"pubkey\"}"
+        },
+        {
+          "name": "quorum",
+          "type": "\"u8\""
+        },
+        {
+          "name": "require_both_backends",
+          "type": "\"bool\""
+        },
+        {
+          "name": "resolver",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "notice_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "finality_margin_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "challenge_window_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "resolve_timeout_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "hold_window_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "claim_expiry_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "attestor_bond",
+          "type": "\"u64\""
+        },
+        {
+          "name": "challenger_bond",
+          "type": "\"u64\""
+        },
+        {
+          "name": "resolver_fee",
+          "type": "\"u64\""
+        },
+        {
+          "name": "distribution_count",
+          "type": "\"u64\""
+        },
+        {
+          "name": "active_distributions",
+          "type": "\"u64\""
+        },
+        {
+          "name": "bump",
+          "type": "\"u8\""
+        }
+      ]
+    },
+    "IssuerParams": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "attestors",
+          "type": "{\"vec\":\"pubkey\"}"
+        },
+        {
+          "name": "quorum",
+          "type": "\"u8\""
+        },
+        {
+          "name": "require_both_backends",
+          "type": "\"bool\""
+        },
+        {
+          "name": "resolver",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "notice_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "finality_margin_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "challenge_window_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "resolve_timeout_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "hold_window_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "claim_expiry_slots",
+          "type": "\"u64\""
+        },
+        {
+          "name": "attestor_bond",
+          "type": "\"u64\""
+        },
+        {
+          "name": "challenger_bond",
+          "type": "\"u64\""
+        },
+        {
+          "name": "resolver_fee",
+          "type": "\"u64\""
+        }
+      ]
+    },
+    "Pending": {
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "distribution",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "owner",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "amount",
+          "type": "\"u64\""
+        },
+        {
+          "name": "created_slot",
+          "type": "\"u64\""
+        },
+        {
+          "name": "payer",
+          "type": "\"pubkey\""
+        },
+        {
+          "name": "bump",
+          "type": "\"u8\""
+        }
+      ]
+    },
+    "Ruling": {
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Upheld",
+          "fields": []
+        },
+        {
+          "name": "Rejected",
+          "fields": []
+        },
+        {
+          "name": "Conflict",
+          "fields": [
+            {
+              "name": "root",
+              "type": "{\"array\":[\"u8\",32]}"
+            }
+          ]
+        },
+        {
+          "name": "Expired",
+          "fields": []
+        }
+      ]
+    }
+  }
+}
